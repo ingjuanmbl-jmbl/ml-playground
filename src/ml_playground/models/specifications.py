@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
-from math import isclose
+from math import isclose, isfinite
+from collections.abc import Iterable
 from typing import Any, Callable, Mapping, TypeAlias
 
 EstimatorFactory: TypeAlias = Callable[..., Any]
@@ -16,6 +17,7 @@ class ProblemType(StrEnum):
 
     CLASSIFICATION = "classification"
     CLUSTERING = "clustering"
+    REGRESSION = "regression"
 
 
 class ModelCapability(StrEnum):
@@ -90,6 +92,8 @@ class HyperparameterSpec:
         if self.choices is not None and value not in self.choices:
             raise ValueError(f"Parameter '{self.name}' must be one of {self.choices!r}.")
         if isinstance(value, (int, float)) and not isinstance(value, bool):
+            if isinstance(value, float) and not isfinite(value):
+                raise ValueError(f"Parameter '{self.name}' must be finite.")
             if self.minimum is not None and value < self.minimum:
                 raise ValueError(f"Parameter '{self.name}' must be at least {self.minimum}.")
             if self.maximum is not None and value > self.maximum:
@@ -148,36 +152,13 @@ class ModelSpecification:
 
     def validate_parameters(self, values: Mapping[str, Any] | None = None) -> dict[str, Any]:
         """Validate supplied values, insert defaults, and return constructor kwargs."""
-        supplied = dict(values or {})
-        specs = {parameter.name: parameter for parameter in self.hyperparameters}
-        unknown = supplied.keys() - specs.keys()
-        if unknown:
-            raise ValueError(f"Unknown parameter(s) for model '{self.id}': {sorted(unknown)}")
-
-        validated: dict[str, Any] = {}
-        for name, spec in specs.items():
-            if name in supplied:
-                value = supplied[name]
-            elif spec.default is not UNSET:
-                value = spec.default
-            elif spec.optional:
-                continue
-            else:
-                raise ValueError(f"Missing required parameter '{name}' for model '{self.id}'.")
-            spec.validate(value)
-            if value is not None:
-                validated[name] = value
-
-        for rule in self.parameter_rules:
-            if all(validated.get(name) == expected for name, expected in rule.when.items()):
-                missing = rule.require - validated.keys()
-                forbidden = rule.forbid & validated.keys()
-                if missing or forbidden:
-                    raise ValueError(
-                        f"{rule.message} Missing: {sorted(missing)}; "
-                        f"not allowed: {sorted(forbidden)}."
-                    )
-        return validated
+        return validate_parameter_values(
+            self.hyperparameters,
+            values,
+            entity_type="model",
+            entity_id=self.id,
+            rules=self.parameter_rules,
+        )
 
     def build_estimator(self, values: Mapping[str, Any] | None = None) -> Any:
         """Validate parameters and construct the estimator declared by this specification."""
@@ -187,3 +168,47 @@ class ModelSpecification:
 def _type_name(value_type: type[Any] | tuple[type[Any], ...]) -> str:
     types = value_type if isinstance(value_type, tuple) else (value_type,)
     return " or ".join(item.__name__ for item in types)
+
+
+def validate_parameter_values(
+    parameters: Iterable[HyperparameterSpec],
+    values: Mapping[str, Any] | None,
+    *,
+    entity_type: str,
+    entity_id: str,
+    rules: tuple[ParameterRule, ...] = (),
+) -> dict[str, Any]:
+    """Shared type/range/default validation for model and dataset specifications."""
+    supplied = dict(values or {})
+    specs = {parameter.name: parameter for parameter in parameters}
+    if unknown := supplied.keys() - specs.keys():
+        raise ValueError(
+            f"Unknown parameter(s) for {entity_type} '{entity_id}': {sorted(unknown)}"
+        )
+
+    validated: dict[str, Any] = {}
+    for name, parameter in specs.items():
+        if name in supplied:
+            value = supplied[name]
+        elif parameter.default is not UNSET:
+            value = parameter.default
+        elif parameter.optional:
+            continue
+        else:
+            raise ValueError(
+                f"Missing required parameter '{name}' for {entity_type} '{entity_id}'."
+            )
+        parameter.validate(value)
+        if value is not None:
+            validated[name] = value
+
+    for rule in rules:
+        if all(validated.get(name) == expected for name, expected in rule.when.items()):
+            missing = rule.require - validated.keys()
+            forbidden = rule.forbid & validated.keys()
+            if missing or forbidden:
+                raise ValueError(
+                    f"{rule.message} Missing: {sorted(missing)}; "
+                    f"not allowed: {sorted(forbidden)}."
+                )
+    return validated

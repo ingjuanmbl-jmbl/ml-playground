@@ -1,12 +1,12 @@
-"""Minimal Streamlit entry point for ML Playground."""
+"""Streamlit entry point for the ML Playground dataset explorer."""
 
 import streamlit as st
+from ml_playground.ui.dataset_explorer import render_dataset_explorer
 
 
 def main() -> None:
-    """Render a simple startup confirmation."""
-    st.title("ML Playground")
-    st.write("Streamlit is running. The project foundation is ready.")
+    """Render the initial dataset exploration view."""
+    render_dataset_explorer()
 
 
 if __name__ == "__main__":

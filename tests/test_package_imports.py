@@ -6,6 +6,10 @@ from importlib import import_module
 MODULES = (
     "ml_playground",
     "ml_playground.data",
+    "ml_playground.data.catalog",
+    "ml_playground.data.contracts",
+    "ml_playground.data.registry",
+    "ml_playground.data.specifications",
     "ml_playground.data.loaders",
     "ml_playground.data.generators",
     "ml_playground.preprocessing",
@@ -20,6 +24,8 @@ MODULES = (
     "ml_playground.visualization.data",
     "ml_playground.visualization.classification",
     "ml_playground.visualization.clustering",
+    "ml_playground.visualization.datasets",
+    "ml_playground.ui.dataset_explorer",
     "ml_playground.experiments.session",
 )
 
