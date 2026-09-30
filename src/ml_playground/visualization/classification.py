@@ -124,4 +124,22 @@ def feature_importance_figure(
     )
 
 
-__all__ = ["coefficient_figure", "decision_boundary_figure", "feature_importance_figure"]
+def loss_curve_figure(loss_curve: Sequence[float]) -> go.Figure:
+    """Plot the training loss recorded by an estimator, without synthesizing values."""
+    values = np.asarray(loss_curve, dtype=float)
+    if values.ndim != 1 or values.size == 0 or not np.isfinite(values).all():
+        raise ValueError("Loss curve must contain a non-empty sequence of finite values.")
+    return px.line(
+        x=np.arange(1, values.size + 1),
+        y=values,
+        labels={"x": "Iteration", "y": "Loss"},
+        title="MLPClassifier training loss",
+    )
+
+
+__all__ = [
+    "coefficient_figure",
+    "decision_boundary_figure",
+    "feature_importance_figure",
+    "loss_curve_figure",
+]

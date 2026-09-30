@@ -50,7 +50,7 @@ Confusion matrices retain their row/column order in `class_labels`.
 
 ## Logistic Regression
 
-The initial model registry includes Logistic Regression (`logistic_regression`). Its declarative
+The model registry includes Logistic Regression (`logistic_regression`). Its declarative
 specification exposes `C`, a pedagogical `regularization` selector (`L1`/`L2`), `solver`, and
 `max_iter`. The factory maps `L1` to `l1_ratio=1` and `L2` to `l1_ratio=0`, without passing the
 deprecated `penalty` argument. `elasticnet` remains unavailable in the interface. Solver
@@ -74,8 +74,9 @@ workflow.
 
 ## Decision Tree Classifier
 
-The registered classifiers are Logistic Regression (`logistic_regression`) and Decision Tree
-(`decision_tree`). Both use the same `ModelSpecification`, `TrainingRequest`, generic runner,
+The registered classifiers are Logistic Regression (`logistic_regression`), Decision Tree
+(`decision_tree`), Random Forest (`random_forest`), and MLPClassifier (`mlp_classifier`). They use
+the same `ModelSpecification`, `TrainingRequest`, generic runner,
 evaluation contract, and dynamically generated hyperparameter controls. Logistic Regression exposes
 `C`, L1/L2 regularization, solver, and `max_iter`; L1 maps to `l1_ratio=1` and L2 to `l1_ratio=0`,
 without passing the deprecated `penalty` argument. It requests `StandardScaler` inside the pipeline,
@@ -87,7 +88,7 @@ a finite depth limits model complexity and can help control overfitting, though 
 depends on the dataset. Trees do not need feature scaling here because their split choices are based
 on feature thresholds/order, which standardization does not meaningfully improve. Its
 `feature_importances_` output is a tree-native split-based measure, distinct from Logistic Regression
-coefficients. Both classifiers can display a direct decision boundary only when the dataset has
+coefficients. Classifiers can display a direct decision boundary only when the dataset has
 exactly two original features, and the visualization predicts through the complete fitted pipeline.
 
 The Streamlit training panel builds one `TrainingRequest`, invokes the generic runner, evaluates
@@ -95,9 +96,29 @@ held-out predictions, and shows outputs provided by the selected model.
 
 ## Random Forest Classifier
 
-Random Forest (`random_forest`) is the third registered classifier. Its declarative controls are
+Random Forest (`random_forest`) is a registered classifier. Its declarative controls are
 `n_estimators`, `max_depth` (including `None`), `min_samples_split`, `min_samples_leaf`,
 `max_features`, and `random_state`. Like Decision Tree, the forest does not use feature scaling and
 reports the estimator's native `feature_importances_` values. It runs through the same pipeline,
 generic training runner, evaluation, and visualization flow; no algorithm-specific runner logic is
 needed. `n_estimators` controls the number of trees and has a practical effect on training time.
+
+## MLPClassifier
+
+`MLPClassifier` (`mlp_classifier`) adds a feed-forward neural network to the same classifier registry.
+`hidden_layer_sizes` is a tuple containing the neuron count in each hidden layer: `(10,)` is one
+layer with 10 neurons, while `(20, 10)` is two layers with 20 and 10 neurons. The available presets
+also include `(20,)` and `(50, 25, 10)`.
+
+`alpha` controls L2 regularization of network weights. `learning_rate_init` sets the optimizer's
+initial step size. `max_iter` caps training iterations; a convergence warning means the optimizer
+reached that limit before satisfying its stopping criterion, so inspect the loss curve and consider
+changing the iteration limit or other settings. `early_stopping` reserves a validation portion of the
+training data and stops when the validation score no longer improves. `loss_curve_` is plotted only
+when the fitted estimator provides it.
+
+MLPClassifier requests `StandardScaler` inside the pipeline because its optimization is sensitive to
+feature scales. The scaler is fitted on training data only. The interface reports configured layer
+sizes, the approximate count of learned weights and biases, activation, iterations, and any available
+early-stopping validation score. These controls are for experimentation; no architecture is assumed
+to be best for every dataset.

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 
 from ml_playground.models.registry import ModelRegistry
@@ -85,6 +86,7 @@ def create_default_model_registry() -> ModelRegistry:
             logistic_regression_specification(),
             decision_tree_specification(),
             random_forest_specification(),
+            mlp_classifier_specification(),
         ]
     )
 
@@ -193,6 +195,76 @@ def random_forest_specification() -> ModelSpecification:
     )
 
 
+def mlp_classifier_specification() -> ModelSpecification:
+    """Return the declarative specification for scikit-learn's MLP classifier."""
+    return ModelSpecification(
+        id="mlp_classifier",
+        display_name="MLPClassifier",
+        problem_type=ProblemType.CLASSIFICATION,
+        estimator_factory=MLPClassifier,
+        hyperparameters=(
+            HyperparameterSpec(
+                "hidden_layer_sizes", tuple, default=(20, 10),
+                choices=((10,), (20,), (20, 10), (50, 25, 10)),
+                item_type=int,
+                item_minimum=1,
+                description=(
+                    "Neurons per hidden layer: for example (20, 10) means two hidden layers "
+                    "with 20 and 10 neurons."
+                ),
+            ),
+            HyperparameterSpec(
+                "activation", str, default="relu",
+                choices=("identity", "logistic", "tanh", "relu"),
+                description="Activation function for hidden layers.",
+            ),
+            HyperparameterSpec(
+                "solver", str, default="adam", choices=("lbfgs", "sgd", "adam"),
+                description="Optimizer used to train the network weights.",
+            ),
+            HyperparameterSpec(
+                "alpha", float, default=0.0001, minimum=0.0, maximum=1.0,
+                description="L2 regularization strength; larger values penalize large weights more.",
+            ),
+            HyperparameterSpec(
+                "learning_rate", str, default="constant",
+                choices=("constant", "invscaling", "adaptive"),
+                description="Learning-rate schedule for the SGD solver.",
+            ),
+            HyperparameterSpec(
+                "learning_rate_init", float, default=0.001, minimum=0.00001, maximum=1.0,
+                description="Initial step size used by the optimizer.",
+            ),
+            HyperparameterSpec(
+                "max_iter", int, default=500, minimum=50, maximum=5000, step=50,
+                description="Maximum number of training iterations (epochs for stochastic solvers).",
+            ),
+            HyperparameterSpec(
+                "batch_size", (int, str), default="auto",
+                choices=("auto", 32, 64, 128, 256),
+                description="Samples per gradient update for stochastic solvers.",
+            ),
+            HyperparameterSpec(
+                "early_stopping", bool, default=False,
+                description="Reserve part of training data to stop when validation score stops improving.",
+            ),
+            HyperparameterSpec(
+                "random_state", int, default=42, minimum=0, maximum=2**32 - 1,
+                description="Execution seed propagated by the generic training runner.",
+            ),
+        ),
+        capabilities=frozenset(
+            {ModelCapability.PREDICT, ModelCapability.PREDICT_PROBA}
+        ),
+        requires_scaling=True,
+        description=(
+            "A feed-forward multilayer perceptron classifier. Inputs are standardized inside the "
+            "training pipeline. Hidden layer sizes, regularization, and optimizer settings are "
+            "exposed for experimentation."
+        ),
+    )
+
+
 def _make_logistic_regression(
     *,
     C: float,
@@ -223,5 +295,6 @@ __all__ = [
     "create_default_model_registry",
     "decision_tree_specification",
     "logistic_regression_specification",
+    "mlp_classifier_specification",
     "random_forest_specification",
 ]

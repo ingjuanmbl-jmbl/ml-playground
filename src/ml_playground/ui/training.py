@@ -23,6 +23,7 @@ from ml_playground.visualization.classification import (
     coefficient_figure,
     decision_boundary_figure,
     feature_importance_figure,
+    loss_curve_figure,
 )
 from ml_playground.visualization.datasets import dataset_scatter
 
@@ -72,6 +73,33 @@ def _render_training_results(
     st.metric("Training time (seconds)", f"{result.training_seconds:.4f}")
     st.write("Resolved parameters")
     st.json(dict(output.configuration.model_parameters))
+
+    estimator = output.trained_model.named_steps["estimator"]
+    if hasattr(estimator, "hidden_layer_sizes") and hasattr(estimator, "coefs_"):
+        hidden_layers = tuple(estimator.hidden_layer_sizes)
+        approximate_parameters = sum(
+            np.asarray(values).size
+            for values in (*estimator.coefs_, *estimator.intercepts_)
+        )
+        st.subheader("Neural network details")
+        st.write("Configured architecture", hidden_layers)
+        detail_columns = st.columns(4)
+        detail_columns[0].metric("Hidden layers", len(hidden_layers))
+        detail_columns[1].metric("Approx. parameters", f"{approximate_parameters:,}")
+        detail_columns[2].metric("Activation", str(estimator.activation))
+        detail_columns[3].metric(
+            "Iterations", str(getattr(estimator, "n_iter_", "Unavailable"))
+        )
+        validation_score = getattr(estimator, "best_validation_score_", None)
+        if validation_score is not None:
+            st.caption(f"Best early-stopping validation score: {validation_score:.4f}")
+        loss_curve = getattr(estimator, "loss_curve_", None)
+        if loss_curve is not None and len(loss_curve) > 0:
+            st.plotly_chart(
+                loss_curve_figure(loss_curve),
+                width="stretch",
+                key="mlp_loss_curve",
+            )
 
     names = _class_names(dataset, result.class_labels)
     st.subheader("Confusion matrix")

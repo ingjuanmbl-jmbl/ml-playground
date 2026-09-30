@@ -60,7 +60,7 @@ def test_random_forest_is_registered_with_expected_contract():
         }
     )
     assert {spec.id for spec in DEFAULT_MODEL_REGISTRY.list()} == {
-        "logistic_regression", "decision_tree", "random_forest"
+        "logistic_regression", "decision_tree", "random_forest", "mlp_classifier"
     }
 
 

@@ -53,7 +53,7 @@ def test_decision_tree_registered_with_classification_capabilities():
         }
     )
     assert {spec.id for spec in DEFAULT_MODEL_REGISTRY.list()} == {
-        "logistic_regression", "decision_tree", "random_forest"
+        "logistic_regression", "decision_tree", "random_forest", "mlp_classifier"
     }
 
 
