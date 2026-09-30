@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 
 from ml_playground.models.registry import ModelRegistry
@@ -80,7 +81,11 @@ def logistic_regression_specification() -> ModelSpecification:
 def create_default_model_registry() -> ModelRegistry:
     """Create the application's initial model catalog."""
     return ModelRegistry(
-        [logistic_regression_specification(), decision_tree_specification()]
+        [
+            logistic_regression_specification(),
+            decision_tree_specification(),
+            random_forest_specification(),
+        ]
     )
 
 
@@ -139,6 +144,55 @@ def decision_tree_specification() -> ModelSpecification:
     )
 
 
+def random_forest_specification() -> ModelSpecification:
+    """Return the declarative specification for a scikit-learn random forest."""
+    return ModelSpecification(
+        id="random_forest",
+        display_name="Random Forest",
+        problem_type=ProblemType.CLASSIFICATION,
+        estimator_factory=RandomForestClassifier,
+        hyperparameters=(
+            HyperparameterSpec(
+                "n_estimators", int, default=100, minimum=1, maximum=1000,
+                description="Number of decision trees in the forest.",
+            ),
+            HyperparameterSpec(
+                "max_depth", (int, type(None)), default=None, minimum=1, optional=True,
+                description="Maximum depth of each tree; None allows growth until other stopping rules apply.",
+            ),
+            HyperparameterSpec(
+                "min_samples_split", int, default=2, minimum=2,
+                description="Minimum samples required to split an internal node.",
+            ),
+            HyperparameterSpec(
+                "min_samples_leaf", int, default=1, minimum=1,
+                description="Minimum samples required at a leaf.",
+            ),
+            HyperparameterSpec(
+                "max_features", str, default="sqrt",
+                choices=("sqrt", "log2"),
+                description="Feature selection strategy used at each split.",
+            ),
+            HyperparameterSpec(
+                "random_state", int, default=42, minimum=0, maximum=2**32 - 1,
+                description="Execution seed propagated by the generic training runner.",
+            ),
+        ),
+        capabilities=frozenset(
+            {
+                ModelCapability.PREDICT,
+                ModelCapability.PREDICT_PROBA,
+                ModelCapability.FEATURE_IMPORTANCES,
+            }
+        ),
+        requires_scaling=False,
+        description=(
+            "An ensemble that aggregates predictions from multiple decision trees. "
+            "The forest exposes native feature_importances_ values and does not require scaling."
+        ),
+    )
+
+
 def _make_logistic_regression(
     *,
     C: float,
@@ -169,4 +223,5 @@ __all__ = [
     "create_default_model_registry",
     "decision_tree_specification",
     "logistic_regression_specification",
+    "random_forest_specification",
 ]

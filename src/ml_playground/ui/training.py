@@ -101,9 +101,9 @@ def _render_training_results(
         )
 
     if output.feature_importances is not None:
-        st.subheader("Decision Tree feature importance")
+        st.subheader("Feature importance")
         st.caption(
-            "These are the tree's native feature_importances_ values, not model coefficients."
+            "These are the estimator's native feature_importances_ values, not model coefficients."
         )
         st.plotly_chart(
             feature_importance_figure(output.feature_importances, dataset.feature_names),

@@ -43,7 +43,7 @@ def test_logistic_regression_is_registered_with_expected_contract():
         }
     )
     assert {item.id for item in DEFAULT_MODEL_REGISTRY.list()} == {
-        "logistic_regression", "decision_tree"
+        "logistic_regression", "decision_tree", "random_forest"
     }
 
 

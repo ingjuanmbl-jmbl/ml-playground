@@ -92,3 +92,12 @@ exactly two original features, and the visualization predicts through the comple
 
 The Streamlit training panel builds one `TrainingRequest`, invokes the generic runner, evaluates
 held-out predictions, and shows outputs provided by the selected model.
+
+## Random Forest Classifier
+
+Random Forest (`random_forest`) is the third registered classifier. Its declarative controls are
+`n_estimators`, `max_depth` (including `None`), `min_samples_split`, `min_samples_leaf`,
+`max_features`, and `random_state`. Like Decision Tree, the forest does not use feature scaling and
+reports the estimator's native `feature_importances_` values. It runs through the same pipeline,
+generic training runner, evaluation, and visualization flow; no algorithm-specific runner logic is
+needed. `n_estimators` controls the number of trees and has a practical effect on training time.

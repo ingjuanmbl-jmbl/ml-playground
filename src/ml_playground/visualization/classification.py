@@ -120,7 +120,7 @@ def feature_importance_figure(
         x=[feature_names[index] for index in order],
         y=values[order],
         labels={"x": "Feature", "y": "feature_importances_"},
-        title="Decision Tree feature_importances_",
+        title="Estimator feature_importances_",
     )
 
 
