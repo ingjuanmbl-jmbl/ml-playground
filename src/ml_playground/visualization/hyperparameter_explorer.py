@@ -7,6 +7,8 @@ from typing import Any
 
 import plotly.graph_objects as go
 
+from ml_playground.ui.education import metric_label
+
 
 def hyperparameter_metric_figure(
     *,
@@ -26,14 +28,14 @@ def hyperparameter_metric_figure(
             x=x_values,
             y=list(scores),
             mode="lines+markers",
-            name=metric,
+            name=metric_label(metric),
             connectgaps=False,
         )
     )
     figure.update_layout(
-        title=f"{model_name}: {metric} vs {hyperparameter}",
+        title=f"{model_name}: {metric_label(metric)} según {hyperparameter}",
         xaxis_title=hyperparameter,
-        yaxis_title=metric,
+        yaxis_title=metric_label(metric),
     )
     if not numeric_axis:
         figure.update_xaxes(type="category", categoryorder="array", categoryarray=x_values)

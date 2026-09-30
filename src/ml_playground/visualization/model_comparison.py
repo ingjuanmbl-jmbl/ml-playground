@@ -5,6 +5,7 @@ from __future__ import annotations
 import plotly.graph_objects as go
 
 from ml_playground.experiments.model_comparison import ModelComparison
+from ml_playground.ui.education import dataset_name, metric_label
 
 
 def comparison_metric_figure(comparison: ModelComparison, metric: str) -> go.Figure:
@@ -18,10 +19,10 @@ def comparison_metric_figure(comparison: ModelComparison, metric: str) -> go.Fig
     figure = go.Figure(
         data=[go.Bar(x=[item.model_name for item in comparison.models], y=values)]
     )
-    title = "Training time (seconds)" if metric == "training_seconds" else metric.replace("_", " ").title()
+    title = metric_label(metric)
     figure.update_layout(
-        title=f"{title} by model — {comparison.dataset_name}",
-        xaxis_title="Model",
+        title=f"{title} por modelo — {dataset_name(comparison.dataset_name, comparison.dataset_name)}",
+        xaxis_title="Modelo",
         yaxis_title=title,
         showlegend=False,
     )

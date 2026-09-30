@@ -6,6 +6,11 @@ from ml_playground.ui.dataset_explorer import render_dataset_explorer
 
 def main() -> None:
     """Render the dataset explorer and registered model workflow."""
+    st.set_page_config(
+        page_title="ML Playground | Laboratorio interactivo",
+        page_icon="🧪",
+        layout="wide",
+    )
     render_dataset_explorer()
 
 

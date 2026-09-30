@@ -1,178 +1,145 @@
-# ML Playground
+# 🧪 ML Playground
 
-ML Playground is an interactive laboratory for exploring datasets and machine learning models.
-The project is organized as a Python package under `src/ml_playground`; Streamlit is the initial
-application interface.
+ML Playground es un laboratorio interactivo para explorar datasets, modelos de Machine Learning e
+hiperparámetros. Permite entrenar modelos, analizar sus métricas y visualizar cómo cambian los
+resultados al modificar una configuración. La aplicación está organizada como un paquete de Python
+en `src/ml_playground` y utiliza Streamlit como interfaz.
 
-## Requirements
+## Requisitos
 
-- Python 3.11 or newer
-- Git
+- Python 3.14.3 para reproducir el entorno probado.
+- Git.
 
-## Install
+## Instalación
 
-From the repository root, create and activate a virtual environment, then install the package and
-development dependencies:
+Desde la raíz del repositorio, crea un entorno virtual e instala el paquete y sus dependencias de
+desarrollo. En Windows PowerShell:
 
-```bash
-python -m venv .venv
-# Windows PowerShell
+```powershell
+py -3.14 -m venv .venv
 .venv\Scripts\Activate.ps1
-# macOS/Linux: source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 ```
 
-## Run
+En macOS o Linux, activa el entorno con `source .venv/bin/activate` después de crearlo con
+`python3.14 -m venv .venv`. Las versiones principales están fijadas en `pyproject.toml`, que es la
+fuente de verdad de dependencias. Para configurar o comprobar el entorno desde PowerShell también
+puedes usar `scripts/setup.ps1`.
 
-```bash
-streamlit run app.py
+## Ejecución y pruebas
+
+```powershell
+python -m streamlit run app.py
+python -m pytest -q
+python -m pip check
 ```
 
-## Test
+## Cómo usar el laboratorio
 
-```bash
-python -m pytest
-```
+1. Elige un conjunto de datos y revisa sus variables y su objetivo.
+2. Abre la sección **Modelos** y selecciona un estimador compatible.
+3. Revisa la explicación del modelo y ajusta los hiperparámetros disponibles.
+4. Ejecuta el entrenamiento y examina métricas y gráficos.
+5. Usa el explorador de hiperparámetros para observar el efecto de cambiar un parámetro.
+6. Compara varios clasificadores sobre una partición común.
 
-The project contains package boundaries, dataset handling, generic training and evaluation, and a
-Streamlit application for exploration and classification.
+## Datasets
 
-## Classification evaluation
+Se incluyen Iris, Wine, Breast Cancer y Digits, además de los generadores sintéticos
+`make_classification`, `make_moons`, `make_circles`, `make_blobs` y `make_regression`. Los parámetros
+de generación y la semilla (`random_state`) quedan registrados para poder reproducir los datos.
+En un dataset sintético, `n_samples` determina cuántas observaciones se generan y `noise` agrega
+variación cuando ese generador lo admite.
 
-`evaluate_classification(TrainingOutput)` calculates held-out metrics only. Precision, recall, and
-F1 use macro averaging, giving each class equal weight; undefined class-level divisions use
-`zero_division=0`. Binary ROC-AUC accepts positive-class probabilities or decision scores.
-Multiclass ROC-AUC uses one-vs-rest with macro averaging and requires a score column for every
-class. If scores are absent, malformed, or ROC-AUC is methodologically undefined (for example,
-`y_test` contains one class), the metric is `None` and `metric_availability["roc_auc"]` explains why.
-Confusion matrices retain their row/column order in `class_labels`.
+## Modelos de clasificación
 
-## Logistic Regression
+Los clasificadores Logistic Regression, Decision Tree, Random Forest, MLPClassifier y XGBoost usan
+las mismas especificaciones declarativas, el registro común, el pipeline de preprocessing, el
+Generic Training Runner y el módulo Evaluation. Sus controles de hiperparámetros se generan desde
+las especificaciones. Los modelos que requieren escalamiento lo ajustan dentro del pipeline y
+únicamente con los datos de entrenamiento.
 
-The model registry includes Logistic Regression (`logistic_regression`). Its declarative
-specification exposes `C`, a pedagogical `regularization` selector (`L1`/`L2`), `solver`, and
-`max_iter`. The factory maps `L1` to `l1_ratio=1` and `L2` to `l1_ratio=0`, without passing the
-deprecated `penalty` argument. `elasticnet` remains unavailable in the interface. Solver
-compatibility is validated from scikit-learn 1.8's support table: L1 accepts `liblinear` and `saga`,
-while L2 accepts all registered solvers. The model requests `StandardScaler`, fitted inside the
-pipeline after the train/test split. The Streamlit training panel creates a `TrainingRequest`, invokes
-the generic runner, evaluates its held-out output, and plots signed coefficients and (only for two
-original features) a decision boundary through the fitted pipeline.
+### Logistic Regression
 
-The dependency floors are scikit-learn 1.8 for the `l1_ratio`-only regularization API and Streamlit
-1.51 for `st.plotly_chart(width="stretch")`. These floors match APIs used by the implementation.
+Logistic Regression es un clasificador lineal que estima probabilidades y separa clases mediante
+una frontera lineal. Sus controles incluyen `C`, `regularization` (L1 o L2), `solver` y `max_iter`.
+Un valor menor de `C` aplica una regularización más fuerte; L1 puede producir coeficientes nulos,
+mientras L2 los reduce gradualmente. La implementación usa la API actual de scikit-learn mediante
+`l1_ratio` y no pasa el parámetro deprecado `penalty`. El modelo utiliza `StandardScaler` dentro del
+pipeline y muestra coeficientes con signo, no una importancia de variables.
 
-## Dependency source of truth
+### Decision Tree
 
-`pyproject.toml` is the canonical dependency definition. The existing `requirements.txt` appears to
-be a fully pinned environment inventory: it includes packages outside this project's declared stack,
-such as Flask, openpyxl, and sodapy. It is retained for now and should not be used to install ML
-Playground. Do not update both files as parallel dependency lists. If a lock or deployment
-requirements file is needed later, derive it from `pyproject.toml` with an explicit reproducible
-workflow.
+Decision Tree crea reglas mediante particiones sucesivas de las variables. Expone `criterion`,
+`splitter`, `max_depth`, `min_samples_split`, `min_samples_leaf` y `max_features`. `max_depth=None`
+no impone un límite de profundidad; un límite finito restringe el tamaño de las reglas y puede
+ayudar a controlar la complejidad. Los árboles no necesitan escalamiento en este flujo porque sus
+particiones se basan en umbrales de las variables. El estimador puede mostrar su medida nativa
+`feature_importances_`, que no representa causalidad.
 
-## Decision Tree Classifier
+### Random Forest
 
-The registered classifiers are Logistic Regression (`logistic_regression`), Decision Tree
-(`decision_tree`), Random Forest (`random_forest`), MLPClassifier (`mlp_classifier`), and XGBoost
-(`xgboost_classifier`). They use
-the same `ModelSpecification`, `TrainingRequest`, generic runner,
-evaluation contract, and dynamically generated hyperparameter controls. Logistic Regression exposes
-`C`, L1/L2 regularization, solver, and `max_iter`; L1 maps to `l1_ratio=1` and L2 to `l1_ratio=0`,
-without passing the deprecated `penalty` argument. It requests `StandardScaler` inside the pipeline,
-fitted only after the train/test split, and reports signed coefficients in scaled feature space.
+Random Forest combina las predicciones de varios árboles. `n_estimators` controla cuántos árboles
+se ajustan; también se ofrecen `max_depth`, `min_samples_split`, `min_samples_leaf`, `max_features`
+y `random_state`. El modelo no requiere escalamiento y puede presentar los valores
+`feature_importances_` nativos del estimador. Aumentar la cantidad de árboles puede elevar el tiempo
+de entrenamiento; ninguna configuración se considera universalmente superior.
 
-Decision Tree exposes `criterion`, `splitter`, `max_depth`, `min_samples_split`,
-`min_samples_leaf`, and `max_features`. `max_depth=None` leaves tree growth unconstrained by depth;
-a finite depth limits model complexity and can help control overfitting, though the appropriate value
-depends on the dataset. Trees do not need feature scaling here because their split choices are based
-on feature thresholds/order, which standardization does not meaningfully improve. Its
-`feature_importances_` output is a tree-native split-based measure, distinct from Logistic Regression
-coefficients. Classifiers can display a direct decision boundary only when the dataset has
-exactly two original features, and the visualization predicts through the complete fitted pipeline.
+### XGBoost
 
-The Streamlit training panel builds one `TrainingRequest`, invokes the generic runner, evaluates
-held-out predictions, and shows outputs provided by the selected model.
+XGBoost construye árboles de manera secuencial (boosting), agregando etapas al ensamble existente.
+`n_estimators` indica las etapas, `learning_rate` escala cada actualización y `max_depth` limita la
+profundidad de los árboles. También se exponen parámetros de muestreo y regularización. El modelo
+no utiliza escalamiento y muestra `feature_importances_` del estimador; sus valores no son
+coeficientes ni una explicación causal.
 
-## Random Forest Classifier
+### MLPClassifier
 
-Random Forest (`random_forest`) is a registered classifier. Its declarative controls are
-`n_estimators`, `max_depth` (including `None`), `min_samples_split`, `min_samples_leaf`,
-`max_features`, and `random_state`. Like Decision Tree, the forest does not use feature scaling and
-reports the estimator's native `feature_importances_` values. It runs through the same pipeline,
-generic training runner, evaluation, and visualization flow; no algorithm-specific runner logic is
-needed. `n_estimators` controls the number of trees and has a practical effect on training time.
+MLPClassifier es una red neuronal multicapa. `hidden_layer_sizes` indica el número de neuronas de
+cada capa oculta: `(10,)` representa una capa con 10 neuronas y `(20, 10)` representa dos capas.
+`alpha` controla la regularización L2, `learning_rate_init` define el paso inicial del optimizador,
+`max_iter` limita las iteraciones y `early_stopping` reserva una porción de los datos de
+entrenamiento para vigilar la mejora. Se muestra la curva `loss_curve_` cuando está disponible.
+MLPClassifier utiliza `StandardScaler` dentro del pipeline. Si aparece un aviso de convergencia,
+significa que se alcanzó el límite de iteraciones antes del criterio de parada.
 
-## MLPClassifier
+## K-Means y clustering
 
-`MLPClassifier` (`mlp_classifier`) adds a feed-forward neural network to the same classifier registry.
-`hidden_layer_sizes` is a tuple containing the neuron count in each hidden layer: `(10,)` is one
-layer with 10 neurons, while `(20, 10)` is two layers with 20 and 10 neurons. The available presets
-also include `(20,)` and `(50, 25, 10)`.
+K-Means agrupa observaciones según su distancia a centroides y no utiliza las etiquetas objetivo
+durante el entrenamiento. `n_clusters` indica cuántos grupos se solicitan. El modelo usa
+`StandardScaler` dentro del pipeline porque la distancia y la posición de los centroides dependen
+de la escala de las variables. La interfaz muestra centroides, gráfico y métricas internas:
+Silhouette, Davies-Bouldin y Calinski-Harabasz. Cada métrica describe un aspecto de la estructura;
+ninguna determina por sí sola la calidad de una segmentación.
 
-`alpha` controls L2 regularization of network weights. `learning_rate_init` sets the optimizer's
-initial step size. `max_iter` caps training iterations; a convergence warning means the optimizer
-reached that limit before satisfying its stopping criterion, so inspect the loss curve and consider
-changing the iteration limit or other settings. `early_stopping` reserves a validation portion of the
-training data and stops when the validation score no longer improves. `loss_curve_` is plotted only
-when the fitted estimator provides it.
+## Evaluación de clasificación
 
-MLPClassifier requests `StandardScaler` inside the pipeline because its optimization is sensitive to
-feature scales. The scaler is fitted on training data only. The interface reports configured layer
-sizes, the approximate count of learned weights and biases, activation, iterations, and any available
-early-stopping validation score. These controls are for experimentation; no architecture is assumed
-to be best for every dataset.
+Evaluation opera sobre los resultados del conjunto de prueba y no vuelve a entrenar el modelo.
+Precision, Recall y F1 usan promedio macro para dar el mismo peso a cada clase; las divisiones
+indefinidas usan `zero_division=0`. Para clasificación binaria, ROC-AUC acepta probabilidades o
+scores de decisión. Para multiclase usa uno contra el resto con promedio macro y requiere un score
+por clase. Si no hay scores válidos o ROC-AUC no se puede calcular metodológicamente, el resultado
+es `None` y se conserva el motivo. La matriz de confusión mantiene el orden de clases en sus ejes.
 
-## K-Means Clustering
+## Explorador de hiperparámetros
 
-K-Means (`kmeans`) is the project's unsupervised model: unlike supervised classifiers, it groups
-observations from their feature values and does not use a target label. `n_clusters` sets the number
-of groups requested; it is a modeling choice, not a label discovered automatically. The model uses
-`StandardScaler` inside its pipeline because Euclidean distances and centroid locations are scale
-sensitive. Labels from Iris, Wine, moons, and circles may be present for dataset reference, but
-training and clustering metrics use only `X`.
+El explorador modifica un hiperparámetro por vez y reutiliza dataset, semilla y partición cuando
+corresponde. Es una exploración de sensibilidad, no una búsqueda automática ni un mecanismo de
+selección del mejor modelo. Sus resultados dependen de los datos y de la partición; no constituyen
+por sí solos una evaluación definitiva de generalización.
 
-Evaluation reports Silhouette (larger is generally more separated), Davies-Bouldin (smaller is
-generally more compact and separated), and Calinski-Harabasz (larger compares between-cluster to
-within-cluster dispersion). Each metric has assumptions and responds to data geometry; none alone
-establishes the absolute quality or usefulness of a segmentation. A metric that is undefined for a
-solution is displayed as unavailable with its reason. Centroids are inverse-transformed through the
-fitted pipeline and shown in original feature units. Cluster charts display two selected original
-features; when there are more features, selecting axes is not a projection of the full feature space.
+## Comparación de modelos
 
-## Hyperparameter Explorer
+La comparación ejecuta dos o más clasificadores sobre los mismos datos, objetivo y partición
+train/test. Informa Exactitud, Precisión, Sensibilidad, F1, ROC-AUC cuando esté disponible y tiempo
+de entrenamiento. Los gráficos conservan el orden seleccionado y no generan ganador, ranking ni
+recomendación. Un único split facilita una comparación lado a lado, pero no constituye una
+evaluación exhaustiva de generalización ni sustituye validación cruzada o datos independientes.
 
-The Hyperparameter Explorer runs a controlled sensitivity sweep for one registered scalar
-hyperparameter at a time. Every run reuses the selected dataset settings, train/test split seed, and
-base model parameters; only the selected parameter varies. Numeric values are displayed in natural
-order and categorical values follow the model specification's declared order. The Explorer reports
-the existing Evaluation metrics and training time in a table and Plotly chart. Results are dependent
-on the dataset and split: this exploratory view is not a formal search procedure, does not select a
-winning configuration, and should not be used to claim definitive test-set performance.
+## Dependencias
 
-## Model Comparison
-
-Model Comparison runs two or more registered supervised classifiers against the same dataset,
-target, stratification choice, and positional train/test indices. It reports Accuracy (fraction of
-correct predictions), macro Precision/Recall/F1, ROC-AUC when the available scores support it, and
-training time. Unavailable ROC-AUC values remain N/A with an explanation. Charts preserve the
-selected model order and do not rank models or choose a winner. Defaults are used for each model,
-with the comparison random state propagated where the model exposes it.
-
-A single train/test split is useful for a controlled side-by-side comparison, but it is not an
-exhaustive estimate of generalization. The held-out test set should not be used to make a definitive
-performance claim; repeated or cross-validated evaluation is outside this feature's scope.
-
-## XGBoost Classifier
-
-XGBoost (`xgboost_classifier`) adds gradient-boosted decision trees through the same registry and
-training flow. Unlike Random Forest, which fits trees as an ensemble and aggregates their outputs,
-boosting adds trees sequentially to improve the current ensemble. The interface exposes a focused
-set of controls: `n_estimators` is the number of boosting rounds, `max_depth` limits the depth of
-each tree, and `learning_rate` scales each update. It also exposes child weight, row and feature
-sampling, split threshold, and L1/L2 leaf-weight regularization. The wrapper determines a suitable
-classification objective from the target, including binary and multiclass cases.
-
-XGBoost does not request feature scaling. The feature importance display uses the estimator's native
-`feature_importances_` values; these are model-derived values, not coefficients or a causal measure.
+`pyproject.toml` es la única fuente declarativa de dependencias del proyecto y fija las versiones
+principales probadas: NumPy 2.4.3, pandas 2.3.3, Plotly 6.6.0, scikit-learn 1.8.0, Streamlit 1.55.0
+y XGBoost 3.4.1. No uses `requirements.txt` para instalar el proyecto ni lo mantengas como una
+segunda lista de dependencias.

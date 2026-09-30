@@ -18,6 +18,7 @@ from ml_playground.experiments.hyperparameter_explorer import (
 from ml_playground.models.catalog import DEFAULT_MODEL_REGISTRY
 from ml_playground.models.registry import ModelRegistry
 from ml_playground.models.specifications import ProblemType, UNSET
+from ml_playground.ui.education import dataset_name, metric_label
 from ml_playground.visualization.hyperparameter_explorer import hyperparameter_metric_figure
 
 _RESULT_KEY = "hyperparameter_explorer_result"
@@ -38,7 +39,10 @@ def _parse_values(raw: str, parameter: Any) -> list[Any]:
         elif numeric_type is float:
             values.append(float(token))
         else:
-            raise ValueError("Enter comma-separated numeric values, or None for an optional value.")
+            raise ValueError(
+                "Ingresa valores numéricos separados por comas; usa None para indicar un "
+                "valor opcional sin límite."
+            )
     return values
 
 
@@ -73,20 +77,22 @@ def _compatible_models(model_registry: ModelRegistry, dataset_problem: ProblemTy
 
 
 def _render_result(result: HyperparameterExploration) -> None:
-    st.subheader("Exploration results")
+    st.subheader("Resultados de la exploración")
     rows = []
     for run in result.results:
         rows.append(
             {
-                "hyperparameter": result.hyperparameter,
-                "value": run.value,
-                **run.metrics,
-                "training_seconds": run.training_seconds,
+                "Hiperparámetro": result.hyperparameter,
+                "Valor": run.value,
+                **{metric_label(name): value for name, value in run.metrics.items()},
+                "Tiempo de entrenamiento (s)": run.training_seconds,
             }
         )
         availability = run.metric_availability[result.metric]
         if not availability.available:
-            st.caption(f"{result.hyperparameter}={run.value}: {availability.reason}")
+            st.caption(f"{metric_label(result.metric)} no disponible para {result.hyperparameter}={run.value}.")
+            with st.expander("Motivo técnico de disponibilidad"):
+                st.code(availability.reason or "Sin detalle adicional.")
     st.dataframe(pd.DataFrame(rows), hide_index=True)
     scores = [run.metrics[result.metric] for run in result.results]
     st.plotly_chart(
@@ -100,18 +106,18 @@ def _render_result(result: HyperparameterExploration) -> None:
         width="stretch",
         key="hyperparameter_explorer_chart",
     )
-    with st.expander("Exploration configuration"):
+    with st.expander("⚙️ Configuración de la exploración"):
         st.json(
             {
-                "model_id": result.model_id,
-                "dataset_id": result.dataset_id,
-                "hyperparameter": result.hyperparameter,
-                "values": result.values,
-                "base_parameters": result.base_parameters,
-                "dataset_parameters": result.dataset_parameters,
-                "test_size": result.test_size,
-                "random_state": result.random_state,
-                "stratify": result.stratify,
+                "modelo": result.model_name,
+                "conjunto_de_datos": result.dataset_name,
+                "hiperparámetro": result.hyperparameter,
+                "valores": result.values,
+                "parámetros_base": result.base_parameters,
+                "parámetros_del_dataset": result.dataset_parameters,
+                "proporción_de_prueba": result.test_size,
+                "semilla_aleatoria": result.random_state,
+                "estratificación": result.stratify,
             }
         )
 
@@ -123,19 +129,20 @@ def render_hyperparameter_explorer(
     model_registry: ModelRegistry = DEFAULT_MODEL_REGISTRY,
 ) -> None:
     """Render the form, invoke the non-UI service, and display saved session results."""
-    st.header("Hyperparameter Explorer")
+    st.header("Explorador de hiperparámetros")
     st.caption(
-        "Sensitivity exploration only. Results depend on the dataset and split; the test set should "
-        "not be used to claim definitive model performance."
+        "⚠️ Esta herramienta explora la sensibilidad a hiperparámetros. Los resultados dependen del "
+        "dataset y de la partición utilizada; por sí solos no constituyen una evaluación definitiva "
+        "de generalización."
     )
     dataset_specs = dataset_registry.list()
     dataset_spec_by_id = {item.id: item for item in dataset_specs}
     with st.form("hyperparameter_explorer_form"):
         dataset_id = st.selectbox(
-            "Explorer dataset",
+            "Conjunto de datos para explorar",
             options=list(dataset_spec_by_id),
             index=list(dataset_spec_by_id).index(current_dataset_id),
-            format_func=lambda value: dataset_spec_by_id[value].display_name,
+            format_func=lambda value: dataset_name(value, dataset_spec_by_id[value].display_name),
         )
         dataset_spec = dataset_spec_by_id[dataset_id]
         dataset_parameters = {
@@ -147,13 +154,15 @@ def render_hyperparameter_explorer(
             model_options = _compatible_models(model_registry, dataset.problem_type)
             model_by_id = {item.id: item for item in model_options}
         except (TypeError, ValueError) as error:
-            st.error(str(error))
+            st.error("No se pudo preparar el dataset o encontrar modelos compatibles.")
+            with st.expander("Detalle técnico del error"):
+                st.code(str(error))
             model_options = []
             model_by_id = {}
 
         if not model_options:
-            st.info("No registered model supports this dataset type.")
-            submitted = st.form_submit_button("Run exploration", disabled=True)
+            st.info("No hay modelos registrados compatibles con este tipo de dataset.")
+            submitted = st.form_submit_button("Ejecutar exploración", disabled=True)
             parameter = None
             parameter_options = []
             model_id = ""
@@ -164,7 +173,7 @@ def render_hyperparameter_explorer(
             stratify = True
         else:
             model_id = st.selectbox(
-                "Explorer model",
+                "Modelo para explorar",
                 options=list(model_by_id),
                 format_func=lambda value: model_by_id[value].display_name,
             )
@@ -172,37 +181,38 @@ def render_hyperparameter_explorer(
             parameter_options = [item for item in model.hyperparameters if is_explorable(item)]
             parameter_by_name = {item.name: item for item in parameter_options}
             if not parameter_options:
-                st.info("This model has no scalar hyperparameters available for exploration.")
+                st.info("Este modelo no tiene hiperparámetros escalares disponibles para explorar.")
                 parameter = None
                 values = []
             else:
                 hyperparameter = st.selectbox(
-                    "Hyperparameter",
+                    "Hiperparámetro",
                     options=list(parameter_by_name),
                     format_func=lambda value: value.replace("_", " ").title(),
                 )
                 parameter = parameter_by_name[hyperparameter]
                 if parameter.choices is not None:
                     values = st.multiselect(
-                        "Values",
+                        "Valores",
                         options=list(parameter.choices),
                         default=list(parameter.choices[: min(3, len(parameter.choices))]),
-                        format_func=lambda value: "None" if value is None else str(value),
+                        format_func=lambda value: "Sin límite (None)" if value is None else str(value),
                     )
                 elif bool in (
                     parameter.value_type
                     if isinstance(parameter.value_type, tuple)
                     else (parameter.value_type,)
                 ):
-                    values = st.multiselect("Values", options=[False, True], default=[False, True])
+                    values = st.multiselect("Valores", options=[False, True], default=[False, True])
                 else:
                     raw_values = st.text_input(
-                        "Values (comma separated)", value=_default_numeric_values(parameter)
+                        "Valores (separados por coma)", value=_default_numeric_values(parameter),
+                        help="Escribe al menos dos valores distintos, separados por comas.",
                     )
                     try:
                         values = _parse_values(raw_values, parameter)
                     except ValueError as error:
-                        st.error(str(error))
+                        st.error(f"Revisa los valores ingresados: {error}")
                         values = []
 
             metrics = (
@@ -211,19 +221,19 @@ def render_hyperparameter_explorer(
                 else CLASSIFICATION_METRICS
             )
             metric = st.selectbox(
-                "Metric", options=list(metrics), format_func=lambda value: value.replace("_", " ").title()
+                "Métrica", options=list(metrics), format_func=metric_label
             )
             test_size = (
-                st.slider("Test set size", 0.1, 0.5, 0.2, 0.05)
+                st.slider("Proporción reservada para prueba", 0.1, 0.5, 0.2, 0.05)
                 if model.problem_type is ProblemType.CLASSIFICATION
                 else 0.2
             )
-            random_state = int(st.number_input("Explorer random state", 0, 2**32 - 1, 42, 1))
+            random_state = int(st.number_input("Semilla aleatoria", 0, 2**32 - 1, 42, 1))
             stratify = st.checkbox(
-                "Stratify classification split", value=True,
+                "Mantener proporción de clases (estratificar)", value=True,
                 disabled=model.problem_type is ProblemType.CLUSTERING,
             )
-            submitted = st.form_submit_button("Run exploration", type="primary")
+            submitted = st.form_submit_button("Ejecutar exploración", type="primary")
 
     if submitted and model_options and parameter is not None:
         try:
@@ -239,7 +249,9 @@ def render_hyperparameter_explorer(
                 stratify=stratify,
             )
         except (KeyError, TypeError, ValueError, RuntimeError) as error:
-            st.error(f"Could not run the exploration: {error}")
+            st.error("No se pudo ejecutar la exploración. Revisa los valores y la compatibilidad.")
+            with st.expander("Detalle técnico del error"):
+                st.code(str(error))
         else:
             st.session_state[_RESULT_KEY] = exploration
 

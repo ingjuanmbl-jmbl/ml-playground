@@ -224,7 +224,7 @@ def test_explorer_service_and_chart_preserve_value_order_and_have_no_streamlit_d
     )
     assert list(figure.data[0].x) == [1, 10]
     assert list(figure.data[0].y) == [0.8, 0.9]
-    assert figure.layout.title.text == "Decision Tree: accuracy vs max_depth"
+    assert figure.layout.title.text == "Decision Tree: Exactitud (Accuracy) según max_depth"
 
 
 def test_structural_parameters_are_not_explorable():
@@ -248,13 +248,13 @@ def test_streamlit_apptest_runs_hyperparameter_explorations(
     from streamlit.testing.v1 import AppTest
 
     app = AppTest.from_file("app.py", default_timeout=90).run()
-    next(item for item in app.selectbox if item.label == "Explorer model").select(model_id).run()
-    next(item for item in app.selectbox if item.label == "Hyperparameter").select(parameter_name).run()
-    next(item for item in app.text_input if item.label == "Values (comma separated)").set_value(values)
-    next(item for item in app.selectbox if item.label == "Metric").select(metric)
-    next(item for item in app.button if item.label == "Run exploration").click().run()
+    next(item for item in app.selectbox if item.label == "Modelo para explorar").select(model_id).run()
+    next(item for item in app.selectbox if item.label == "Hiperparámetro").select(parameter_name).run()
+    next(item for item in app.text_input if item.label == "Valores (separados por coma)").set_value(values)
+    next(item for item in app.selectbox if item.label == "Métrica").select(metric)
+    next(item for item in app.button if item.label == "Ejecutar exploración").click().run()
     assert not app.exception, app.exception
-    assert "Exploration results" in [item.value for item in app.subheader]
+    assert "Resultados de la exploración" in [item.value for item in app.subheader]
     assert len(app.get("plotly_chart")) >= 2
     result = app.session_state["hyperparameter_explorer_result"]
     assert result.values == tuple(int(value) for value in values.split(","))

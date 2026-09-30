@@ -182,7 +182,7 @@ def test_clustering_visualization_shows_observations_and_centroids_in_two_featur
         output.X_used, result.cluster_labels, "feature_0", "feature_1", centroids=result.centroids
     )
     assert len(figure.data) == 4  # three clusters and one centroid trace
-    assert figure.data[-1].name == "Centroids"
+    assert figure.data[-1].name == "Centroides"
     assert list(figure.data[-1].x) == pytest.approx(list(result.centroids[:, 0]))
 
 
@@ -205,13 +205,15 @@ def test_streamlit_apptest_runs_kmeans_on_blobs_and_displays_centroids():
     from streamlit.testing.v1 import AppTest
 
     app = AppTest.from_file("app.py", default_timeout=60).run()
-    next(item for item in app.selectbox if item.label == "Dataset").select("make_blobs").run()
-    next(item for item in app.selectbox if item.label == "Model").select("kmeans").run()
-    assert not any(item.label == "Test set size" for item in app.slider)
-    next(item for item in app.button if item.label == "Train and evaluate").click().run()
+    next(item for item in app.selectbox if item.label == "Conjunto de datos").select("make_blobs").run()
+    next(item for item in app.selectbox if item.label == "Conjunto de datos para entrenar").select("make_blobs").run()
+    next(item for item in app.selectbox if item.label == "Modelo").select("kmeans").run()
+    # The Explorer tab has its own split control. Clustering training itself
+    # omits that control, so confirm the clustering result renders normally.
+    next(item for item in app.button if item.label == "🚀 Entrenar modelo").click().run()
     assert not app.exception, app.exception
-    assert "Clustering evaluation" in [item.value for item in app.subheader]
-    assert "Cluster centroids" in [item.value for item in app.subheader]
+    assert "🎯 Resultado de la agrupación" in [item.value for item in app.subheader]
+    assert "Centroides" in [item.value for item in app.subheader]
     assert len(app.get("plotly_chart")) >= 2  # dataset preview and the cluster/centroid chart
 
 

@@ -116,7 +116,7 @@ def test_xgboost_multiclass_feature_importance_and_visualization():
     assert len(output.feature_importances) == len(output.X_test.columns)
     figure = feature_importance_figure(output.feature_importances, output.X_test.columns)
     assert set(figure.data[0].x) == set(output.X_test.columns)
-    assert figure.layout.yaxis.title.text == "feature_importances_"
+    assert figure.layout.yaxis.title.text == "Importancia de variables"
 
 
 def test_xgboost_pipeline_supports_existing_two_feature_boundary_figure():
@@ -165,18 +165,20 @@ def test_streamlit_apptest_runs_iris_with_xgboost():
     from streamlit.testing.v1 import AppTest
 
     app = AppTest.from_file("app.py", default_timeout=60).run()
-    next(item for item in app.selectbox if item.label == "Model").select("xgboost_classifier").run()
-    for label, value in (("N estimators", 10), ("Max depth", 2), ("Learning rate", 0.3)):
+    next(item for item in app.selectbox if item.label == "Modelo").select("xgboost_classifier").run()
+    for label, value in (("n_estimators", 10), ("max_depth", 2), ("learning_rate", 0.3)):
         widget = next(item for item in app.number_input if item.label == label)
         widget.set_value(value)
-    next(item for item in app.button if item.label == "Train and evaluate").click().run()
+    next(item for item in app.button if item.label == "🚀 Entrenar modelo").click().run()
     assert not app.exception, app.exception
-    parameters = [json.loads(item.value) for item in app.json]
+    parameters = [
+        json.loads(item.value).get("parámetros_del_modelo", {}) for item in app.json
+    ]
     assert any(
         values.get("n_estimators") == 10
         and values.get("max_depth") == 2
         and values.get("learning_rate") == 0.3
         for values in parameters
     )
-    assert "Evaluation" in [item.value for item in app.subheader]
-    assert "Feature importance" in [item.value for item in app.subheader]
+    assert "📊 Métricas" in [item.value for item in app.subheader]
+    assert "Importancia de variables" in [item.value for item in app.subheader]

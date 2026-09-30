@@ -137,7 +137,7 @@ def test_tree_importances_match_features_and_plot_in_descending_order():
     plotted = np.asarray(figure.data[0].y)
     assert list(figure.data[0].x) == [output.X_train.columns[index] for index in np.argsort(importances)[::-1]]
     assert np.all(plotted[:-1] >= plotted[1:])
-    assert figure.layout.yaxis.title.text == "feature_importances_"
+    assert figure.layout.yaxis.title.text == "Importancia de variables"
 
 
 def test_decision_boundary_is_available_for_two_features_via_pipeline():
@@ -202,15 +202,15 @@ def test_streamlit_builds_optional_depth_control_from_hyperparameter_spec():
     from streamlit.testing.v1 import AppTest
 
     app = AppTest.from_file("app.py", default_timeout=20).run()
-    next(item for item in app.selectbox if item.label == "Model").select("decision_tree").run()
+    next(item for item in app.selectbox if item.label == "Modelo").select("decision_tree").run()
     assert not app.exception
     depth_toggle = next(
-        item for item in app.checkbox if item.label == "Set a maximum for max depth"
+        item for item in app.checkbox if item.label == "Definir un máximo para max_depth"
     )
     assert not depth_toggle.value
     depth_toggle.check().run()
     assert not app.exception
-    assert any(item.label == "Max depth" for item in app.number_input)
+    assert any(item.label == "max_depth" for item in app.number_input)
 
 
 def test_default_dataset_catalog_contains_supported_classification_datasets():

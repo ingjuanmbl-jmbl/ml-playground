@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 
 from ml_playground.data.contracts import Dataset
 from ml_playground.models.specifications import ProblemType
+from ml_playground.ui.education import dataset_name
 
 
 def dataset_scatter(dataset: Dataset, x_feature: str, y_feature: str) -> go.Figure:
@@ -20,19 +21,20 @@ def dataset_scatter(dataset: Dataset, x_feature: str, y_feature: str) -> go.Figu
     if dataset.y is not None:
         if dataset.problem_type in {ProblemType.CLASSIFICATION, ProblemType.CLUSTERING}:
             labels = {index: name for index, name in enumerate(dataset.target_names or ())}
-            frame["target"] = dataset.y.map(lambda value: labels.get(value, str(value))).to_numpy()
+            frame["objetivo"] = dataset.y.map(lambda value: labels.get(value, str(value))).to_numpy()
         else:
-            frame["target"] = dataset.y.to_numpy()
+            frame["objetivo"] = dataset.y.to_numpy()
         return px.scatter(
             frame,
             x=x_feature,
             y=y_feature,
-            color="target",
-            title=f"{dataset.dataset_name}: {x_feature} vs {y_feature}",
+            color="objetivo",
+            title=f"{dataset_name(dataset.dataset_name, dataset.dataset_name)}: {x_feature} frente a {y_feature}",
+            labels={"objetivo": "Variable objetivo"},
         )
     return px.scatter(
         frame,
         x=x_feature,
         y=y_feature,
-        title=f"{dataset.dataset_name}: {x_feature} vs {y_feature}",
+        title=f"{dataset_name(dataset.dataset_name, dataset.dataset_name)}: {x_feature} frente a {y_feature}",
     )

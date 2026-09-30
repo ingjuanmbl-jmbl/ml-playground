@@ -9,12 +9,12 @@ description = "Interactive laboratory for exploring machine learning models."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "numpy>=1.26",
-    "pandas>=2.1",
-    "plotly>=5.18",
-    "scikit-learn>=1.8",
-    "streamlit>=1.51",
-    "xgboost>=3.4.1",
+    "numpy==2.4.3",
+    "pandas==2.3.3",
+    "plotly==6.6.0",
+    "scikit-learn==1.8.0",
+    "streamlit==1.55.0",
+    "xgboost==3.4.1",
 ]
 
 [project.optional-dependencies]

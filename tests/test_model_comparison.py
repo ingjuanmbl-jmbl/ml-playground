@@ -158,8 +158,8 @@ def test_app_test_runs_model_comparison() -> None:
 
     app = AppTest.from_file(str(Path("app.py").resolve()), default_timeout=60).run()
     assert not app.exception
-    comparison_button = next(button for button in app.button if button.label == "Run comparison")
+    comparison_button = next(button for button in app.button if button.label == "Ejecutar comparación")
     comparison_button.click().run()
     assert not app.exception
-    assert any("Model Comparison" in header.value for header in app.header)
+    assert any("Comparación de modelos" in header.value for header in app.header)
     assert app.session_state["model_comparison_result"] is not None

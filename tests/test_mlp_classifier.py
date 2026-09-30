@@ -175,14 +175,16 @@ def test_streamlit_apptest_runs_iris_with_selected_mlp_architecture(architecture
     from streamlit.testing.v1 import AppTest
 
     app = AppTest.from_file("app.py", default_timeout=30).run()
-    next(item for item in app.selectbox if item.label == "Model").select("mlp_classifier").run()
-    next(item for item in app.selectbox if item.label == "Hidden layer sizes").select(architecture)
-    next(item for item in app.button if item.label == "Train and evaluate").click().run()
+    next(item for item in app.selectbox if item.label == "Modelo").select("mlp_classifier").run()
+    next(item for item in app.selectbox if item.label == "hidden_layer_sizes").select(architecture)
+    next(item for item in app.button if item.label == "🚀 Entrenar modelo").click().run()
     assert not app.exception, app.exception
-    parameter_objects = [json.loads(item.value) for item in app.json]
+    parameter_objects = [
+        json.loads(item.value).get("parámetros_del_modelo", {}) for item in app.json
+    ]
     assert any(
         values.get("hidden_layer_sizes") == list(architecture)
         for values in parameter_objects
     )
-    assert "Neural network details" in [item.value for item in app.subheader]
+    assert "🧠 Detalles de la red neuronal" in [item.label for item in app.expander]
     assert len(app.get("plotly_chart")) >= 2  # confusion matrix and recorded loss curve

@@ -34,8 +34,8 @@ def clustering_scatter_figure(
         x=x_feature,
         y=y_feature,
         color="cluster",
-        title="K-Means clusters",
-        labels={"cluster": "Cluster"},
+        title="Grupos encontrados por K-Means",
+        labels={"cluster": "Grupo"},
     )
     if centroids is not None:
         center_values = np.asarray(centroids, dtype=float)
@@ -48,7 +48,7 @@ def clustering_scatter_figure(
                 x=center_values[:, x_index],
                 y=center_values[:, y_index],
                 mode="markers",
-                name="Centroids",
+                name="Centroides",
                 marker={"symbol": "x", "size": 16, "color": "black", "line": {"width": 3}},
             )
         )

@@ -47,7 +47,7 @@ def decision_boundary_figure(
             x=x_grid,
             y=y_grid,
             z=z_values,
-            name="Predicted class",
+            name="Clase predicha",
             showscale=False,
             contours={"start": -0.5, "end": len(class_labels) - 0.5, "size": 1, "coloring": "fill"},
             colorscale=[[i / max(len(class_labels) - 1, 1), palette[i % len(palette)]] for i in range(len(class_labels))],
@@ -66,10 +66,10 @@ def decision_boundary_figure(
             )
         )
     figure.update_layout(
-        title="Decision boundary on held-out observations",
+        title="Frontera de decisión sobre observaciones de prueba",
         xaxis_title=x_name,
         yaxis_title=y_name,
-        legend_title="Target class",
+        legend_title="Clase objetivo",
     )
     return figure
 
@@ -92,18 +92,18 @@ def coefficient_figure(
         positive_label = labels[1] if len(labels) > 1 else labels[0]
         figure = px.bar(
             x=list(feature_names), y=values[0],
-            labels={"x": "Feature", "y": "Signed coefficient"},
-            title=f"Signed coefficients ({positive_label} vs other class)",
+            labels={"x": "Variable predictora", "y": "Coeficiente con signo"},
+            title=f"Coeficientes con signo ({positive_label} frente a las demás clases)",
         )
-        figure.update_layout(xaxis_title="Feature", yaxis_title="Signed coefficient")
+        figure.update_layout(xaxis_title="Variable predictora", yaxis_title="Coeficiente con signo")
         return figure
-    row_labels = labels if len(labels) == values.shape[0] else [f"Coefficient row {i + 1}" for i in range(values.shape[0])]
+    row_labels = labels if len(labels) == values.shape[0] else [f"Fila de coeficientes {i + 1}" for i in range(values.shape[0])]
     return go.Figure(
         data=go.Heatmap(z=values, x=list(feature_names), y=row_labels, colorscale="RdBu", zmid=0)
     ).update_layout(
-        title="Signed coefficients by class (scaled feature space)",
-        xaxis_title="Feature",
-        yaxis_title="Class",
+        title="Coeficientes con signo por clase (espacio escalado)",
+        xaxis_title="Variable predictora",
+        yaxis_title="Clase",
     )
 
 
@@ -119,8 +119,8 @@ def feature_importance_figure(
     return px.bar(
         x=[feature_names[index] for index in order],
         y=values[order],
-        labels={"x": "Feature", "y": "feature_importances_"},
-        title="Estimator feature_importances_",
+        labels={"x": "Variable predictora", "y": "Importancia de variables"},
+        title="Importancia de variables proporcionada por el estimador",
     )
 
 
@@ -132,8 +132,8 @@ def loss_curve_figure(loss_curve: Sequence[float]) -> go.Figure:
     return px.line(
         x=np.arange(1, values.size + 1),
         y=values,
-        labels={"x": "Iteration", "y": "Loss"},
-        title="MLPClassifier training loss",
+        labels={"x": "Iteración", "y": "Pérdida"},
+        title="Curva de pérdida de MLPClassifier",
     )
 
 

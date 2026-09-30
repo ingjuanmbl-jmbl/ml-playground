@@ -151,7 +151,7 @@ def test_random_forest_feature_importances_map_to_features_and_visualize():
     plotted_values = np.asarray(figure.data[0].y)
     assert list(figure.data[0].x) == [names[index] for index in np.argsort(values)[::-1]]
     assert np.all(plotted_values[:-1] >= plotted_values[1:])
-    assert figure.layout.title.text == "Estimator feature_importances_"
+    assert figure.layout.title.text == "Importancia de variables proporcionada por el estimador"
 
 
 def test_random_forest_decision_boundary_uses_trained_pipeline_for_two_features():
@@ -204,10 +204,12 @@ def test_streamlit_random_forest_form_runs_on_iris():
     from streamlit.testing.v1 import AppTest
 
     app = AppTest.from_file("app.py", default_timeout=20).run()
-    next(item for item in app.selectbox if item.label == "Model").select("random_forest").run()
-    next(item for item in app.number_input if item.label == "N estimators").set_value(10)
-    next(item for item in app.button if item.label == "Train and evaluate").click().run()
+    next(item for item in app.selectbox if item.label == "Modelo").select("random_forest").run()
+    next(item for item in app.number_input if item.label == "n_estimators").set_value(10)
+    next(item for item in app.button if item.label == "🚀 Entrenar modelo").click().run()
     assert not app.exception, app.exception
-    rendered_parameters = [json.loads(item.value) for item in app.json]
+    rendered_parameters = [
+        json.loads(item.value).get("parámetros_del_modelo", {}) for item in app.json
+    ]
     assert any(values.get("n_estimators") == 10 for values in rendered_parameters)
-    assert "Feature importance" in [item.value for item in app.subheader]
+    assert "Importancia de variables" in [item.value for item in app.subheader]
