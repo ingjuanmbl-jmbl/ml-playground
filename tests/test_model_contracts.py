@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 
 import pytest
+from sklearn.pipeline import Pipeline
 
 from ml_playground.evaluation.results import ClassificationResult, ClusteringResult
 from ml_playground.models.registry import ModelRegistry
@@ -13,7 +14,12 @@ from ml_playground.models.specifications import (
     ParameterRule,
     ProblemType,
 )
-from ml_playground.training.contracts import TrainingOutput, TrainingRequest, TrainingRunner
+from ml_playground.training.contracts import (
+    TrainingConfiguration,
+    TrainingOutput,
+    TrainingRequest,
+    TrainingRunner,
+)
 
 
 class ExampleEstimator:
@@ -149,28 +155,35 @@ def test_registry_rejects_duplicate_or_unknown_ids() -> None:
 
 def test_training_request_and_output_are_framework_independent_contracts() -> None:
     request = TrainingRequest(
-        specification=make_specification(),
-        parameters={"strength": 1.0},
-        X_train=[[1.0]],
-        y_train=[0],
-        X_predict=[[2.0]],
-        metadata={"dataset": "test-data"},
+        dataset_id="test-data",
+        model_id="test-example",
+        model_parameters={"strength": 1.0},
     )
     output = TrainingOutput(
-        trained_model=ExampleEstimator(strength=1.0),
+        trained_model=Pipeline([("estimator", ExampleEstimator(strength=1.0))]),
         predictions=[1],
         probabilities=[[0.2, 0.8]],
         scores=[0.8],
         training_seconds=0.01,
         metadata={"seed": 7},
-        configuration={"strength": 1.0},
+        configuration=TrainingConfiguration(
+            dataset_id="test-data",
+            model_id="test-example",
+            dataset_parameters={},
+            model_parameters={"strength": 1.0},
+            test_size=0.2,
+            split_random_state=42,
+            estimator_random_state=None,
+            stratified=True,
+        ),
     )
 
-    assert request.specification.id == "test-example"
+    assert request.dataset_id == "test-data"
+    assert request.model_id == "test-example"
     assert output.predictions == [1]
     assert output.probabilities == [[0.2, 0.8]]
     assert output.scores == [0.8]
-    assert output.configuration == {"strength": 1.0}
+    assert output.configuration.model_parameters == {"strength": 1.0}
 
     class ExampleRunner:
         def run(self, training_request: TrainingRequest) -> TrainingOutput:

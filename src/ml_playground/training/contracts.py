@@ -1,36 +1,79 @@
-"""Input and output data contracts for model training."""
+"""Structured, framework-independent training request and output contracts."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Protocol, runtime_checkable
+from math import isfinite
+from typing import Mapping, Protocol, runtime_checkable
 
-from ml_playground.models.specifications import ModelSpecification
+import numpy as np
+import pandas as pd
+from sklearn.pipeline import Pipeline
 
 
 @dataclass(frozen=True, slots=True)
 class TrainingRequest:
-    """Data and configuration supplied to a runner, independent of any UI framework."""
+    """Dataset/model identifiers and execution options for one training run."""
 
-    specification: ModelSpecification
-    parameters: Mapping[str, Any]
-    X_train: Any
-    y_train: Any | None = None
-    X_predict: Any | None = None
-    metadata: Mapping[str, Any] = field(default_factory=dict)
+    dataset_id: str
+    model_id: str
+    dataset_parameters: Mapping[str, object] = field(default_factory=dict)
+    model_parameters: Mapping[str, object] = field(default_factory=dict)
+    test_size: float = 0.2
+    random_state: int = 42
+    stratify: bool = True
+
+    def __post_init__(self) -> None:
+        if not self.dataset_id.strip():
+            raise ValueError("dataset_id cannot be empty.")
+        if not self.model_id.strip():
+            raise ValueError("model_id cannot be empty.")
+        if isinstance(self.test_size, bool) or not isinstance(self.test_size, (int, float)):
+            raise TypeError("test_size must be a number between 0 and 1.")
+        if not isfinite(self.test_size) or not 0 < self.test_size < 1:
+            raise ValueError("test_size must be greater than 0 and less than 1.")
+        if isinstance(self.random_state, bool) or not isinstance(self.random_state, int):
+            raise TypeError("random_state must be an integer.")
+        if not 0 <= self.random_state <= 2**32 - 1:
+            raise ValueError("random_state must be between 0 and 2**32 - 1.")
+        if not isinstance(self.stratify, bool):
+            raise TypeError("stratify must be a bool.")
+
+
+@dataclass(frozen=True, slots=True)
+class TrainingConfiguration:
+    """Resolved, reproducible configuration actually used for a run."""
+
+    dataset_id: str
+    model_id: str
+    dataset_parameters: Mapping[str, object]
+    model_parameters: Mapping[str, object]
+    test_size: float
+    split_random_state: int
+    estimator_random_state: object | None
+    stratified: bool
 
 
 @dataclass(frozen=True, slots=True)
 class TrainingOutput:
-    """Structured output of one fit/predict run."""
+    """Fitted pipeline, held-out outputs, split data, timing, and provenance."""
 
-    trained_model: Any
-    predictions: Any | None
-    probabilities: Any | None
-    scores: Any | None
+    trained_model: Pipeline
+    predictions: np.ndarray | None
+    probabilities: np.ndarray | None
+    scores: np.ndarray | None
     training_seconds: float
-    metadata: Mapping[str, Any]
-    configuration: Mapping[str, Any]
+    metadata: Mapping[str, object]
+    configuration: TrainingConfiguration
+    X_train: pd.DataFrame | None = None
+    X_test: pd.DataFrame | None = None
+    y_train: pd.Series | None = None
+    y_test: pd.Series | None = None
+    feature_importances: object | None = None
+    coefficients: object | None = None
+    cluster_labels: np.ndarray | None = None
+    noise_mask: np.ndarray | None = None
+    centroids: np.ndarray | None = None
 
     def __post_init__(self) -> None:
         if self.training_seconds < 0:
