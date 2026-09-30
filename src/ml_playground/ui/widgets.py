@@ -21,7 +21,24 @@ def parameter_widget(parameter: Any, *, key_prefix: str) -> Any:
             index=parameter.choices.index(default),
             help=help_text,
             key=f"{key_prefix}_{parameter.name}",
-            format_func=lambda value: "None (no penalty)" if value is None else str(value),
+            format_func=lambda value: "None (default)" if value is None else str(value),
+        )
+    value_types = parameter.value_type if isinstance(parameter.value_type, tuple) else (parameter.value_type,)
+    if parameter.optional and int in value_types and type(None) in value_types:
+        has_limit = st.checkbox(
+            f"Set a maximum for {label.lower()}",
+            value=parameter.default is not None,
+            help=help_text,
+            key=f"{key_prefix}_{parameter.name}_enabled",
+        )
+        if not has_limit:
+            return None
+        minimum = int(parameter.minimum) if parameter.minimum is not None else 1
+        maximum = int(parameter.maximum) if parameter.maximum is not None else 100
+        default = parameter.default if parameter.default is not None else minimum
+        return st.number_input(
+            label, min_value=minimum, max_value=maximum, value=int(default),
+            step=int(parameter.step or 1), help=help_text, key=f"{key_prefix}_{parameter.name}",
         )
     if parameter.value_type is int:
         minimum = int(parameter.minimum) if parameter.minimum is not None else None

@@ -42,7 +42,9 @@ def test_logistic_regression_is_registered_with_expected_contract():
             ModelCapability.COEFFICIENTS,
         }
     )
-    assert DEFAULT_MODEL_REGISTRY.list() == (specification,)
+    assert {item.id for item in DEFAULT_MODEL_REGISTRY.list()} == {
+        "logistic_regression", "decision_tree"
+    }
 
 
 def test_logistic_regression_hyperparameters_have_valid_defaults_and_ranges():

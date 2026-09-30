@@ -22,6 +22,7 @@ from ml_playground.ui.widgets import parameter_widget
 from ml_playground.visualization.classification import (
     coefficient_figure,
     decision_boundary_figure,
+    feature_importance_figure,
 )
 from ml_playground.visualization.datasets import dataset_scatter
 
@@ -87,16 +88,27 @@ def _render_training_results(
         key="evaluation_confusion_matrix",
     )
 
-    st.subheader("Logistic Regression coefficients")
-    st.caption(
-        "Signed coefficients describe direction and magnitude in standardized feature space; "
-        "they are not feature-importance scores."
-    )
     if output.coefficients is not None:
+        st.subheader("Logistic Regression coefficients")
+        st.caption(
+            "Signed coefficients describe direction and magnitude in standardized feature space; "
+            "they are not feature-importance scores."
+        )
         st.plotly_chart(
             coefficient_figure(output.coefficients, dataset.feature_names, result.class_labels, class_names=names),
             width="stretch",
             key="logistic_coefficients",
+        )
+
+    if output.feature_importances is not None:
+        st.subheader("Decision Tree feature importance")
+        st.caption(
+            "These are the tree's native feature_importances_ values, not model coefficients."
+        )
+        st.plotly_chart(
+            feature_importance_figure(output.feature_importances, dataset.feature_names),
+            width="stretch",
+            key="decision_tree_feature_importances",
         )
 
     st.subheader("Decision boundary")

@@ -1,4 +1,4 @@
-"""Plotly figures for classifier outputs and fitted linear coefficients."""
+"""Plotly figures for classifier outputs, coefficients, and tree importances."""
 
 from __future__ import annotations
 
@@ -107,4 +107,21 @@ def coefficient_figure(
     )
 
 
-__all__ = ["coefficient_figure", "decision_boundary_figure"]
+def feature_importance_figure(
+    importances: object,
+    feature_names: Sequence[str],
+) -> go.Figure:
+    """Plot a classifier's native feature_importances_ values in descending order."""
+    values = np.asarray(importances, dtype=float)
+    if values.ndim != 1 or values.size != len(feature_names):
+        raise ValueError("Feature importance values must match the feature names.")
+    order = np.argsort(values)[::-1]
+    return px.bar(
+        x=[feature_names[index] for index in order],
+        y=values[order],
+        labels={"x": "Feature", "y": "feature_importances_"},
+        title="Decision Tree feature_importances_",
+    )
+
+
+__all__ = ["coefficient_figure", "decision_boundary_figure", "feature_importance_figure"]
