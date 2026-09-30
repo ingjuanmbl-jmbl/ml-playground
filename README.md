@@ -141,6 +141,16 @@ solution is displayed as unavailable with its reason. Centroids are inverse-tran
 fitted pipeline and shown in original feature units. Cluster charts display two selected original
 features; when there are more features, selecting axes is not a projection of the full feature space.
 
+## Hyperparameter Explorer
+
+The Hyperparameter Explorer runs a controlled sensitivity sweep for one registered scalar
+hyperparameter at a time. Every run reuses the selected dataset settings, train/test split seed, and
+base model parameters; only the selected parameter varies. Numeric values are displayed in natural
+order and categorical values follow the model specification's declared order. The Explorer reports
+the existing Evaluation metrics and training time in a table and Plotly chart. Results are dependent
+on the dataset and split: this exploratory view is not a formal search procedure, does not select a
+winning configuration, and should not be used to claim definitive test-set performance.
+
 ## XGBoost Classifier
 
 XGBoost (`xgboost_classifier`) adds gradient-boosted decision trees through the same registry and

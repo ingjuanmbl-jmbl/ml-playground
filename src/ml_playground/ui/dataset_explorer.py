@@ -12,6 +12,7 @@ from ml_playground.data.registry import DatasetRegistry
 from ml_playground.data.specifications import DatasetSpecification
 from ml_playground.models.specifications import ProblemType
 from ml_playground.ui.training import render_training_panel
+from ml_playground.ui.hyperparameter_explorer import render_hyperparameter_explorer
 from ml_playground.ui.widgets import parameter_widget
 from ml_playground.visualization.datasets import dataset_scatter
 
@@ -99,3 +100,7 @@ def render_dataset_explorer(registry: DatasetRegistry = DEFAULT_DATASET_REGISTRY
     _render_scatter(dataset)
     st.divider()
     render_training_panel(dataset, dataset_id, parameters, registry)
+    render_hyperparameter_explorer(
+        current_dataset_id=dataset_id,
+        dataset_registry=registry,
+    )
