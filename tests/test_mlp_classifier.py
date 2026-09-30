@@ -51,7 +51,7 @@ def test_mlp_classifier_is_registered_with_expected_contract():
         {ModelCapability.PREDICT, ModelCapability.PREDICT_PROBA}
     )
     assert {spec.id for spec in DEFAULT_MODEL_REGISTRY.list()} == {
-        "logistic_regression", "decision_tree", "random_forest", "mlp_classifier"
+        "logistic_regression", "decision_tree", "random_forest", "mlp_classifier", "xgboost_classifier"
     }
 
 

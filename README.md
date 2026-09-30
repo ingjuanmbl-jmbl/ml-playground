@@ -75,7 +75,8 @@ workflow.
 ## Decision Tree Classifier
 
 The registered classifiers are Logistic Regression (`logistic_regression`), Decision Tree
-(`decision_tree`), Random Forest (`random_forest`), and MLPClassifier (`mlp_classifier`). They use
+(`decision_tree`), Random Forest (`random_forest`), MLPClassifier (`mlp_classifier`), and XGBoost
+(`xgboost_classifier`). They use
 the same `ModelSpecification`, `TrainingRequest`, generic runner,
 evaluation contract, and dynamically generated hyperparameter controls. Logistic Regression exposes
 `C`, L1/L2 regularization, solver, and `max_iter`; L1 maps to `l1_ratio=1` and L2 to `l1_ratio=0`,
@@ -122,3 +123,16 @@ feature scales. The scaler is fitted on training data only. The interface report
 sizes, the approximate count of learned weights and biases, activation, iterations, and any available
 early-stopping validation score. These controls are for experimentation; no architecture is assumed
 to be best for every dataset.
+
+## XGBoost Classifier
+
+XGBoost (`xgboost_classifier`) adds gradient-boosted decision trees through the same registry and
+training flow. Unlike Random Forest, which fits trees as an ensemble and aggregates their outputs,
+boosting adds trees sequentially to improve the current ensemble. The interface exposes a focused
+set of controls: `n_estimators` is the number of boosting rounds, `max_depth` limits the depth of
+each tree, and `learning_rate` scales each update. It also exposes child weight, row and feature
+sampling, split threshold, and L1/L2 leaf-weight regularization. The wrapper determines a suitable
+classification objective from the target, including binary and multiclass cases.
+
+XGBoost does not request feature scaling. The feature importance display uses the estimator's native
+`feature_importances_` values; these are model-derived values, not coefficients or a causal measure.

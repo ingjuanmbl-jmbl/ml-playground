@@ -6,6 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
+from xgboost import XGBClassifier
 
 from ml_playground.models.registry import ModelRegistry
 from ml_playground.models.specifications import (
@@ -87,6 +88,7 @@ def create_default_model_registry() -> ModelRegistry:
             decision_tree_specification(),
             random_forest_specification(),
             mlp_classifier_specification(),
+            xgboost_classifier_specification(),
         ]
     )
 
@@ -288,6 +290,49 @@ def _make_logistic_regression(
     )
 
 
+def xgboost_classifier_specification() -> ModelSpecification:
+    """Return the declarative specification for XGBoost's sklearn classifier."""
+    return ModelSpecification(
+        id="xgboost_classifier",
+        display_name="XGBoost",
+        problem_type=ProblemType.CLASSIFICATION,
+        estimator_factory=XGBClassifier,
+        hyperparameters=(
+            HyperparameterSpec("n_estimators", int, default=100, minimum=1, maximum=1000,
+                               description="Number of boosting rounds (trees)."),
+            HyperparameterSpec("max_depth", int, default=6, minimum=1, maximum=20,
+                               description="Maximum depth of each tree."),
+            HyperparameterSpec("learning_rate", float, default=0.1, minimum=0.001, maximum=1.0,
+                               description="Step size used to scale each boosting update."),
+            HyperparameterSpec("min_child_weight", float, default=1.0, minimum=0.0, maximum=100.0,
+                               description="Minimum summed instance weight required in a child."),
+            HyperparameterSpec("subsample", float, default=1.0, minimum=0.1, maximum=1.0,
+                               description="Fraction of training rows sampled per boosting round."),
+            HyperparameterSpec("colsample_bytree", float, default=1.0, minimum=0.1, maximum=1.0,
+                               description="Fraction of features sampled for each tree."),
+            HyperparameterSpec("gamma", float, default=0.0, minimum=0.0, maximum=100.0,
+                               description="Minimum loss reduction required to make a split."),
+            HyperparameterSpec("reg_alpha", float, default=0.0, minimum=0.0, maximum=100.0,
+                               description="L1 regularization term on leaf weights."),
+            HyperparameterSpec("reg_lambda", float, default=1.0, minimum=0.0, maximum=100.0,
+                               description="L2 regularization term on leaf weights."),
+            HyperparameterSpec("random_state", int, default=42, minimum=0, maximum=2**32 - 1,
+                               description="Execution seed propagated by the generic runner."),
+        ),
+        capabilities=frozenset({
+            ModelCapability.PREDICT,
+            ModelCapability.PREDICT_PROBA,
+            ModelCapability.FEATURE_IMPORTANCES,
+        }),
+        requires_scaling=False,
+        description=(
+            "Gradient-boosted decision trees add trees sequentially to improve the current "
+            "ensemble. The estimator selects a classification objective from target data and "
+            "exposes native feature_importances_."
+        ),
+    )
+
+
 DEFAULT_MODEL_REGISTRY = create_default_model_registry()
 
 __all__ = [
@@ -297,4 +342,5 @@ __all__ = [
     "logistic_regression_specification",
     "mlp_classifier_specification",
     "random_forest_specification",
+    "xgboost_classifier_specification",
 ]

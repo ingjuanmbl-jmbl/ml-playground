@@ -8,7 +8,6 @@ from typing import Any
 import numpy as np
 import plotly.express as px
 import streamlit as st
-from sklearn.exceptions import ConvergenceWarning
 
 from ml_playground.data.contracts import Dataset
 from ml_playground.data.registry import DatasetRegistry
@@ -215,11 +214,10 @@ def render_training_panel(
         )
         runner = GenericTrainingRunner(model_registry=model_registry, dataset_registry=dataset_registry)
         with warnings.catch_warnings(record=True) as captured:
-            warnings.simplefilter("always", ConvergenceWarning)
+            warnings.simplefilter("always")
             output = runner.run(request)
         for warning in captured:
-            if issubclass(warning.category, ConvergenceWarning):
-                st.warning(f"Convergence warning: {warning.message}")
+            st.warning(f"{warning.category.__name__}: {warning.message}")
         result = evaluate_classification(output)
     except (KeyError, TypeError, ValueError, RuntimeError) as error:
         st.error(f"Could not train the selected model: {error}")
