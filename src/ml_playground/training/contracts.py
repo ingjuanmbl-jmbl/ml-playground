@@ -12,6 +12,48 @@ from sklearn.pipeline import Pipeline
 
 
 @dataclass(frozen=True, slots=True)
+class TrainingSplit:
+    """Positional train/test indices and the settings used to create them."""
+
+    train_indices: tuple[int, ...]
+    test_indices: tuple[int, ...]
+    n_samples: int
+    test_size: float
+    random_state: int
+    stratified: bool
+
+    def __post_init__(self) -> None:
+        if isinstance(self.n_samples, bool) or not isinstance(self.n_samples, int):
+            raise TypeError("n_samples must be an integer.")
+        if isinstance(self.test_size, bool) or not isinstance(self.test_size, (int, float)):
+            raise TypeError("test_size must be a number between 0 and 1.")
+        if not 0 < self.test_size < 1:
+            raise ValueError("test_size must be greater than 0 and less than 1.")
+        if isinstance(self.random_state, bool) or not isinstance(self.random_state, int):
+            raise TypeError("random_state must be an integer.")
+        if not 0 <= self.random_state <= 2**32 - 1:
+            raise ValueError("random_state must be between 0 and 2**32 - 1.")
+        if not isinstance(self.stratified, bool):
+            raise TypeError("stratified must be a bool.")
+        if not isinstance(self.train_indices, tuple) or not isinstance(self.test_indices, tuple):
+            raise TypeError("Training split indices must be tuples.")
+        if any(
+            isinstance(index, bool) or not isinstance(index, int)
+            for index in (*self.train_indices, *self.test_indices)
+        ):
+            raise TypeError("Training split indices must be integers.")
+        train = set(self.train_indices)
+        test = set(self.test_indices)
+        expected = set(range(self.n_samples))
+        if self.n_samples < 2 or not train or not test:
+            raise ValueError("A training split requires non-empty train and test partitions.")
+        if len(train) != len(self.train_indices) or len(test) != len(self.test_indices):
+            raise ValueError("Training split indices must not contain duplicates.")
+        if train & test or train | test != expected:
+            raise ValueError("Training split indices must partition all observations exactly once.")
+
+
+@dataclass(frozen=True, slots=True)
 class TrainingRequest:
     """Dataset/model identifiers and execution options for one training run."""
 
@@ -22,6 +64,7 @@ class TrainingRequest:
     test_size: float = 0.2
     random_state: int = 42
     stratify: bool = True
+    split: TrainingSplit | None = None
 
     def __post_init__(self) -> None:
         if not self.dataset_id.strip():
@@ -38,6 +81,8 @@ class TrainingRequest:
             raise ValueError("random_state must be between 0 and 2**32 - 1.")
         if not isinstance(self.stratify, bool):
             raise TypeError("stratify must be a bool.")
+        if self.split is not None and not isinstance(self.split, TrainingSplit):
+            raise TypeError("split must be a TrainingSplit or None.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,6 +98,7 @@ class TrainingConfiguration:
     estimator_random_state: object | None
     stratified: bool
     split_performed: bool = True
+    split: TrainingSplit | None = None
 
 
 @dataclass(frozen=True, slots=True)

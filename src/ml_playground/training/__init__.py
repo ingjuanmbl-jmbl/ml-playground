@@ -5,6 +5,7 @@ from ml_playground.training.contracts import (
     TrainingOutput,
     TrainingRequest,
     TrainingRunner,
+    TrainingSplit,
 )
 from ml_playground.training.runner import GenericTrainingRunner
 
@@ -14,5 +15,6 @@ __all__ = [
     "TrainingOutput",
     "TrainingRequest",
     "TrainingRunner",
+    "TrainingSplit",
 ]
 

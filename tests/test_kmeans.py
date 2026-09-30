@@ -120,7 +120,7 @@ def test_kmeans_fits_all_X_and_does_not_use_original_target(monkeypatch):
 
     monkeypatch.setattr(
         runner_module,
-        "train_test_split",
+        "create_training_split",
         lambda *args, **kwargs: pytest.fail("clustering must not split or pass the target"),
     )
     request = TrainingRequest(

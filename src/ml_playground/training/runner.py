@@ -7,7 +7,6 @@ from time import perf_counter
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
 
 from ml_playground.data.catalog import DEFAULT_DATASET_REGISTRY
 from ml_playground.data.registry import DatasetRegistry
@@ -19,7 +18,9 @@ from ml_playground.training.contracts import (
     TrainingOutput,
     TrainingRequest,
     TrainingRunner,
+    TrainingSplit,
 )
+from ml_playground.training.splitting import create_training_split
 
 
 class GenericTrainingRunner:
@@ -144,19 +145,24 @@ class GenericTrainingRunner:
                 X_used=dataset.X.copy(),
             )
 
-        stratify_target = (
-            dataset.y
-            if specification.problem_type is ProblemType.CLASSIFICATION and request.stratify
-            else None
+        stratified = (
+            specification.problem_type is ProblemType.CLASSIFICATION and request.stratify
         )
         try:
-            X_train, X_test, y_train, y_test = train_test_split(
-                dataset.X,
-                dataset.y,
+            split = request.split or create_training_split(
+                n_samples=dataset.n_observations,
                 test_size=request.test_size,
                 random_state=request.random_state,
-                stratify=stratify_target,
+                target=dataset.y,
+                stratified=stratified,
             )
+            self._validate_split(split, dataset.n_observations, request, stratified)
+            train_indices = list(split.train_indices)
+            test_indices = list(split.test_indices)
+            X_train = dataset.X.iloc[train_indices]
+            X_test = dataset.X.iloc[test_indices]
+            y_train = dataset.y.iloc[train_indices]
+            y_test = dataset.y.iloc[test_indices]
         except ValueError as error:
             raise ValueError(
                 f"Unable to split dataset '{request.dataset_id}' for training: {error}"
@@ -210,7 +216,8 @@ class GenericTrainingRunner:
             test_size=request.test_size,
             split_random_state=request.random_state,
             estimator_random_state=estimator_random_state,
-            stratified=stratify_target is not None,
+            stratified=stratified,
+            split=split,
         )
         metadata: dict[str, object] = {
             "dataset_name": dataset.dataset_name,
@@ -279,6 +286,22 @@ class GenericTrainingRunner:
                 f"not expose '{attribute_name}'."
             ) from error
 
+    @staticmethod
+    def _validate_split(
+        split: TrainingSplit,
+        n_samples: int,
+        request: TrainingRequest,
+        stratified: bool,
+    ) -> None:
+        if split.n_samples != n_samples:
+            raise ValueError("The supplied split does not match the dataset observation count.")
+        if split.test_size != request.test_size:
+            raise ValueError("The supplied split does not match test_size.")
+        if split.random_state != request.random_state:
+            raise ValueError("The supplied split does not match random_state.")
+        if split.stratified != stratified:
+            raise ValueError("The supplied split does not match the requested stratification.")
+
 
 __all__ = [
     "GenericTrainingRunner",
@@ -286,4 +309,5 @@ __all__ = [
     "TrainingOutput",
     "TrainingRequest",
     "TrainingRunner",
+    "TrainingSplit",
 ]

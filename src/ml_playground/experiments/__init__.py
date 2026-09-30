@@ -5,6 +5,18 @@ from ml_playground.experiments.hyperparameter_explorer import (
     HyperparameterExplorer,
     HyperparameterRun,
 )
+from ml_playground.experiments.model_comparison import (
+    ComparedModelResult,
+    ModelComparison,
+    ModelComparisonService,
+)
 
-__all__ = ["HyperparameterExploration", "HyperparameterExplorer", "HyperparameterRun"]
+__all__ = [
+    "ComparedModelResult",
+    "HyperparameterExploration",
+    "HyperparameterExplorer",
+    "HyperparameterRun",
+    "ModelComparison",
+    "ModelComparisonService",
+]
 

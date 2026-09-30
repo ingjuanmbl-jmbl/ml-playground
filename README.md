@@ -151,6 +151,19 @@ the existing Evaluation metrics and training time in a table and Plotly chart. R
 on the dataset and split: this exploratory view is not a formal search procedure, does not select a
 winning configuration, and should not be used to claim definitive test-set performance.
 
+## Model Comparison
+
+Model Comparison runs two or more registered supervised classifiers against the same dataset,
+target, stratification choice, and positional train/test indices. It reports Accuracy (fraction of
+correct predictions), macro Precision/Recall/F1, ROC-AUC when the available scores support it, and
+training time. Unavailable ROC-AUC values remain N/A with an explanation. Charts preserve the
+selected model order and do not rank models or choose a winner. Defaults are used for each model,
+with the comparison random state propagated where the model exposes it.
+
+A single train/test split is useful for a controlled side-by-side comparison, but it is not an
+exhaustive estimate of generalization. The held-out test set should not be used to make a definitive
+performance claim; repeated or cross-validated evaluation is outside this feature's scope.
+
 ## XGBoost Classifier
 
 XGBoost (`xgboost_classifier`) adds gradient-boosted decision trees through the same registry and
