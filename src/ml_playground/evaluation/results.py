@@ -29,6 +29,20 @@ class ExperimentResult:
 
 
 @dataclass(frozen=True, slots=True)
+class MetricAvailability:
+    """Availability of one metric, including a reason when it cannot be computed."""
+
+    available: bool
+    reason: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.available and self.reason is not None:
+            raise ValueError("Available metrics cannot have an unavailability reason.")
+        if not self.available and not self.reason:
+            raise ValueError("Unavailable metrics require a reason.")
+
+
+@dataclass(frozen=True, slots=True)
 class ClassificationResult(ExperimentResult):
     """Classification-specific predictions, scores, and metrics."""
 
@@ -39,6 +53,9 @@ class ClassificationResult(ExperimentResult):
     confusion_matrix: Any | None = None
     feature_importances: Any | None = None
     coefficients: Any | None = None
+    class_labels: tuple[Any, ...] = ()
+    averaging_strategy: str = "macro"
+    metric_availability: Mapping[str, MetricAvailability] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         ExperimentResult.__post_init__(self)

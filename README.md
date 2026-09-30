@@ -38,6 +38,16 @@ python -m pytest
 The initial project foundation contains package boundaries and an application startup check.
 Dataset handling and machine learning functionality will be added incrementally.
 
+## Classification evaluation
+
+`evaluate_classification(TrainingOutput)` calculates held-out metrics only. Precision, recall, and
+F1 use macro averaging, giving each class equal weight; undefined class-level divisions use
+`zero_division=0`. Binary ROC-AUC accepts positive-class probabilities or decision scores.
+Multiclass ROC-AUC uses one-vs-rest with macro averaging and requires a score column for every
+class. If scores are absent, malformed, or ROC-AUC is methodologically undefined (for example,
+`y_test` contains one class), the metric is `None` and `metric_availability["roc_auc"]` explains why.
+Confusion matrices retain their row/column order in `class_labels`.
+
 ## Dependency source of truth
 
 `pyproject.toml` is the canonical dependency definition. The existing `requirements.txt` appears to
