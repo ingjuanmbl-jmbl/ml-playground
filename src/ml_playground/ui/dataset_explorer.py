@@ -10,58 +10,22 @@ from ml_playground.data.catalog import DEFAULT_DATASET_REGISTRY
 from ml_playground.data.contracts import Dataset
 from ml_playground.data.registry import DatasetRegistry
 from ml_playground.data.specifications import DatasetSpecification
-from ml_playground.models.specifications import ProblemType, UNSET
+from ml_playground.models.specifications import ProblemType
+from ml_playground.ui.training import render_training_panel
+from ml_playground.ui.widgets import parameter_widget
 from ml_playground.visualization.datasets import dataset_scatter
 
 MAX_PLOTTED_FEATURES = 20
-
-
-def _parameter_widget(parameter: Any) -> Any:
-    """Render a widget based on the shared declarative parameter metadata."""
-    label = parameter.name.replace("_", " ").capitalize()
-    help_text = parameter.description or None
-    if parameter.choices is not None:
-        default = parameter.default if parameter.default is not UNSET else parameter.choices[0]
-        return st.selectbox(
-            label,
-            options=parameter.choices,
-            index=parameter.choices.index(default),
-            help=help_text,
-        )
-    if parameter.value_type is int:
-        minimum = int(parameter.minimum) if parameter.minimum is not None else None
-        maximum = int(parameter.maximum) if parameter.maximum is not None else None
-        default = parameter.default if parameter.default is not UNSET else minimum or 0
-        return st.number_input(
-            label,
-            min_value=minimum,
-            max_value=maximum,
-            value=int(default),
-            step=int(parameter.step or 1),
-            help=help_text,
-        )
-    if parameter.value_type is float:
-        minimum = float(parameter.minimum) if parameter.minimum is not None else None
-        maximum = float(parameter.maximum) if parameter.maximum is not None else None
-        default = parameter.default if parameter.default is not UNSET else minimum or 0.0
-        return st.number_input(
-            label,
-            min_value=minimum,
-            max_value=maximum,
-            value=float(default),
-            step=float(parameter.step or 0.01),
-            help=help_text,
-        )
-    if parameter.value_type is bool:
-        return st.checkbox(label, value=parameter.default, help=help_text)
-    raise TypeError(f"No Streamlit widget mapping for parameter '{parameter.name}'.")
 
 
 def _configure_dataset(specification: DatasetSpecification) -> dict[str, Any]:
     if not specification.parameters:
         return {}
     st.subheader("Synthetic dataset settings")
-    return {parameter.name: _parameter_widget(parameter) for parameter in specification.parameters}
+    return {
+        parameter.name: parameter_widget(parameter, key_prefix=f"dataset_{specification.id}")
+        for parameter in specification.parameters
+    }
 
 
 def _render_target_summary(dataset: Dataset) -> None:
@@ -99,7 +63,7 @@ def _render_scatter(dataset: Dataset) -> None:
         x_feature = x_column.selectbox("X axis", feature_names, key="dataset_x_feature")
         y_choices = [name for name in feature_names if name != x_feature]
         y_feature = y_column.selectbox("Y axis", y_choices, key="dataset_y_feature")
-    st.plotly_chart(dataset_scatter(dataset, x_feature, y_feature), use_container_width=True)
+    st.plotly_chart(dataset_scatter(dataset, x_feature, y_feature), width="stretch")
 
 
 def render_dataset_explorer(registry: DatasetRegistry = DEFAULT_DATASET_REGISTRY) -> None:
@@ -133,3 +97,5 @@ def render_dataset_explorer(registry: DatasetRegistry = DEFAULT_DATASET_REGISTRY
     st.json({"metadata": dataset.metadata, "parameters": dataset.parameters})
     st.subheader("Feature-space view")
     _render_scatter(dataset)
+    st.divider()
+    render_training_panel(dataset, dataset_id, parameters, registry)

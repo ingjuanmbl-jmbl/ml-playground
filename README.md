@@ -48,6 +48,21 @@ class. If scores are absent, malformed, or ROC-AUC is methodologically undefined
 `y_test` contains one class), the metric is `None` and `metric_availability["roc_auc"]` explains why.
 Confusion matrices retain their row/column order in `class_labels`.
 
+## First registered classifier
+
+The initial model registry includes Logistic Regression (`logistic_regression`). Its declarative
+specification exposes `C`, a pedagogical `regularization` selector (`L1`/`L2`), `solver`, and
+`max_iter`. The factory maps `L1` to `l1_ratio=1` and `L2` to `l1_ratio=0`, without passing the
+deprecated `penalty` argument. `elasticnet` remains unavailable in the interface. Solver
+compatibility is validated from scikit-learn 1.8's support table: L1 accepts `liblinear` and `saga`,
+while L2 accepts all registered solvers. The model requests `StandardScaler`, fitted inside the
+pipeline after the train/test split. The Streamlit training panel creates a `TrainingRequest`, invokes
+the generic runner, evaluates its held-out output, and plots signed coefficients and (only for two
+original features) a decision boundary through the fitted pipeline.
+
+The dependency floors are scikit-learn 1.8 for the `l1_ratio`-only regularization API and Streamlit
+1.51 for `st.plotly_chart(width="stretch")`. These floors match APIs used by the implementation.
+
 ## Dependency source of truth
 
 `pyproject.toml` is the canonical dependency definition. The existing `requirements.txt` appears to
