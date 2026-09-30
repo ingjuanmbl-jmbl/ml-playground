@@ -1,4 +1,4 @@
-"""Generic supervised training orchestration without model-specific branches."""
+"""Generic training orchestration driven by problem type and declared capabilities."""
 
 from __future__ import annotations
 
@@ -23,12 +23,10 @@ from ml_playground.training.contracts import (
 
 
 class GenericTrainingRunner:
-    """Train registered supervised estimators using the common model and data contracts.
+    """Train registered estimators without algorithm-specific branches.
 
-    Classification and regression use a train/test split. Clustering has a different fit/label
-    contract across estimators and is intentionally deferred until those execution semantics are
-    specified; this runner raises ``NotImplementedError`` for clustering instead of assuming
-    ``predict`` or ``fit_predict`` exists.
+    Supervised tasks split features and target before fitting. Clustering fits the full feature
+    matrix without reading its optional target and obtains outputs through declared capabilities.
     """
 
     def __init__(
@@ -40,19 +38,19 @@ class GenericTrainingRunner:
         self._dataset_registry = dataset_registry
 
     def run(self, request: TrainingRequest) -> TrainingOutput:
-        """Validate, split, construct, fit, predict by declared capabilities, and return output."""
+        """Validate, fit, and return a structured result for the requested problem type."""
         dataset = self._dataset_registry.build(request.dataset_id, request.dataset_parameters)
         specification = self._model_registry.get(request.model_id)
-        if dataset.problem_type is not specification.problem_type:
+        clustering_uses_features_only = (
+            specification.problem_type is ProblemType.CLUSTERING
+            and dataset.problem_type is not ProblemType.REGRESSION
+        )
+        if dataset.problem_type is not specification.problem_type and not clustering_uses_features_only:
             raise ValueError(
                 f"Dataset '{request.dataset_id}' is {dataset.problem_type.value}, but model "
                 f"'{request.model_id}' requires {specification.problem_type.value}."
             )
-        if specification.problem_type is ProblemType.CLUSTERING:
-            raise NotImplementedError(
-                "Clustering execution is deferred; no fit/prediction method is assumed."
-            )
-        if dataset.y is None:
+        if specification.problem_type is not ProblemType.CLUSTERING and dataset.y is None:
             raise ValueError(f"Dataset '{request.dataset_id}' has no target for supervised training.")
 
         model_parameters = dict(request.model_parameters)
@@ -62,9 +60,89 @@ class GenericTrainingRunner:
         if "random_state" in declared_parameters and "random_state" not in model_parameters:
             model_parameters["random_state"] = request.random_state
         resolved_parameters = specification.validate_parameters(model_parameters)
+        if (
+            specification.problem_type is ProblemType.CLUSTERING
+            and "n_clusters" in resolved_parameters
+            and resolved_parameters["n_clusters"] > dataset.n_observations
+        ):
+            raise ValueError(
+                "n_clusters cannot exceed the number of observations in the dataset."
+            )
         estimator_random_state = (
             resolved_parameters.get("random_state") if "random_state" in declared_parameters else None
         )
+
+        pipeline = build_pipeline(specification, resolved_parameters)
+        if specification.problem_type is ProblemType.CLUSTERING:
+            started_at = datetime.now(timezone.utc)
+            started = perf_counter()
+            # Unsupervised fit receives X alone: no split, target access, or target-derived state.
+            pipeline.fit(dataset.X)
+            training_seconds = perf_counter() - started
+            final_estimator = pipeline.named_steps[ESTIMATOR_STEP]
+            cluster_labels = self._read_attribute(
+                final_estimator,
+                specification.capabilities,
+                ModelCapability.CLUSTER_LABELS,
+                "labels_",
+            )
+            centroids = self._read_attribute(
+                final_estimator,
+                specification.capabilities,
+                ModelCapability.CENTROIDS,
+                "cluster_centers_",
+            )
+            preprocessor = pipeline.named_steps["preprocessing"]
+            inverse_transform = getattr(preprocessor, "inverse_transform", None)
+            if cluster_labels is not None:
+                cluster_labels = np.asarray(cluster_labels)
+            if centroids is not None:
+                centroids = np.asarray(centroids)
+                if callable(inverse_transform):
+                    centroids = np.asarray(inverse_transform(centroids))
+            centroids_are_original_scale = (
+                isinstance(preprocessor, str) and preprocessor == "passthrough"
+                or callable(inverse_transform)
+            )
+            configuration = TrainingConfiguration(
+                dataset_id=request.dataset_id,
+                model_id=request.model_id,
+                dataset_parameters=dict(dataset.parameters),
+                model_parameters=resolved_parameters,
+                test_size=request.test_size,
+                split_random_state=request.random_state,
+                estimator_random_state=estimator_random_state,
+                stratified=False,
+                split_performed=False,
+            )
+            metadata: dict[str, object] = {
+                "dataset_name": dataset.dataset_name,
+                "dataset_metadata": dict(dataset.metadata),
+                "dataset_problem_type": dataset.problem_type.value,
+                "model_name": specification.display_name,
+                "n_observations": dataset.n_observations,
+                "n_features": dataset.n_features,
+                "target_used": False,
+                "train_test_split": False,
+                "centroids_space": (
+                    "original feature scale"
+                    if centroids_are_original_scale
+                    else "preprocessed feature space"
+                ),
+                "started_at": started_at.isoformat(),
+            }
+            return TrainingOutput(
+                trained_model=pipeline,
+                predictions=None,
+                probabilities=None,
+                scores=None,
+                training_seconds=training_seconds,
+                metadata=metadata,
+                configuration=configuration,
+                cluster_labels=cluster_labels,
+                centroids=centroids,
+                X_used=dataset.X.copy(),
+            )
 
         stratify_target = (
             dataset.y
@@ -84,7 +162,6 @@ class GenericTrainingRunner:
                 f"Unable to split dataset '{request.dataset_id}' for training: {error}"
             ) from error
 
-        pipeline = build_pipeline(specification, resolved_parameters)
         started_at = datetime.now(timezone.utc)
         started = perf_counter()
         pipeline.fit(X_train, y_train)

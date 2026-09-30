@@ -14,9 +14,9 @@ from ml_playground.data.catalog import DEFAULT_DATASET_REGISTRY
 from ml_playground.evaluation.classification import evaluate_classification
 from ml_playground.evaluation.results import ClassificationResult
 from ml_playground.models.classification import (
-    DEFAULT_MODEL_REGISTRY,
     logistic_regression_specification,
 )
+from ml_playground.models.catalog import DEFAULT_MODEL_REGISTRY
 from ml_playground.models.specifications import ModelCapability, ProblemType
 from ml_playground.preprocessing.pipelines import ESTIMATOR_STEP, PREPROCESSING_STEP, build_pipeline
 from ml_playground.training.contracts import TrainingRequest
@@ -43,7 +43,7 @@ def test_logistic_regression_is_registered_with_expected_contract():
         }
     )
     assert {item.id for item in DEFAULT_MODEL_REGISTRY.list()} == {
-        "logistic_regression", "decision_tree", "random_forest", "mlp_classifier", "xgboost_classifier"
+        "logistic_regression", "decision_tree", "random_forest", "mlp_classifier", "xgboost_classifier", "kmeans"
     }
 
 

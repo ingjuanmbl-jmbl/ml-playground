@@ -7,6 +7,7 @@ from ml_playground.evaluation.results import (
     MetricAvailability,
 )
 from ml_playground.evaluation.classification import evaluate_classification
+from ml_playground.evaluation.clustering import evaluate_clustering
 
 __all__ = [
     "ClassificationResult",
@@ -14,5 +15,6 @@ __all__ = [
     "ExperimentResult",
     "MetricAvailability",
     "evaluate_classification",
+    "evaluate_clustering",
 ]
 

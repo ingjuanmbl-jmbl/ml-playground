@@ -15,6 +15,7 @@ from ml_playground.data.contracts import Dataset
 from ml_playground.data.registry import DatasetRegistry
 from ml_playground.data.specifications import DatasetSpecification
 from ml_playground.models.registry import ModelRegistry
+from ml_playground.models.clustering import kmeans_specification
 from ml_playground.models.specifications import (
     HyperparameterSpec,
     ModelCapability,
@@ -397,8 +398,7 @@ def test_integration_leakage_check_fits_scaler_on_split_train_only():
     assert output.predictions.shape == (len(output.X_test),)
 
 
-def test_clustering_is_explicitly_deferred_without_assuming_fit_predict():
-    clustering_spec = make_model_specification(problem_type=ProblemType.CLUSTERING)
+def test_clustering_runner_uses_declared_labels_without_assuming_supervised_predict():
     clustering_dataset = DatasetSpecification(
         id="tiny-clustering",
         display_name="Tiny clustering data",
@@ -406,11 +406,16 @@ def test_clustering_is_explicitly_deferred_without_assuming_fit_predict():
         factory=make_clustering_dataset,
     )
     runner = GenericTrainingRunner(
-        ModelRegistry([clustering_spec]), DatasetRegistry([clustering_dataset])
+        ModelRegistry([kmeans_specification()]), DatasetRegistry([clustering_dataset])
     )
-
-    with pytest.raises(NotImplementedError, match="Clustering execution is deferred"):
-        runner.run(make_request(dataset_id="tiny-clustering", dataset_parameters={}))
+    output = runner.run(
+        TrainingRequest(
+            dataset_id="tiny-clustering", model_id="kmeans", model_parameters={"n_clusters": 2}
+        )
+    )
+    assert output.cluster_labels is not None
+    assert output.X_used is not None
+    assert output.y_train is None and output.y_test is None
 
 
 def test_training_package_has_no_streamlit_imports():

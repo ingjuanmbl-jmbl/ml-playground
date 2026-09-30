@@ -124,6 +124,23 @@ sizes, the approximate count of learned weights and biases, activation, iteratio
 early-stopping validation score. These controls are for experimentation; no architecture is assumed
 to be best for every dataset.
 
+## K-Means Clustering
+
+K-Means (`kmeans`) is the project's unsupervised model: unlike supervised classifiers, it groups
+observations from their feature values and does not use a target label. `n_clusters` sets the number
+of groups requested; it is a modeling choice, not a label discovered automatically. The model uses
+`StandardScaler` inside its pipeline because Euclidean distances and centroid locations are scale
+sensitive. Labels from Iris, Wine, moons, and circles may be present for dataset reference, but
+training and clustering metrics use only `X`.
+
+Evaluation reports Silhouette (larger is generally more separated), Davies-Bouldin (smaller is
+generally more compact and separated), and Calinski-Harabasz (larger compares between-cluster to
+within-cluster dispersion). Each metric has assumptions and responds to data geometry; none alone
+establishes the absolute quality or usefulness of a segmentation. A metric that is undefined for a
+solution is displayed as unavailable with its reason. Centroids are inverse-transformed through the
+fitted pipeline and shown in original feature units. Cluster charts display two selected original
+features; when there are more features, selecting axes is not a projection of the full feature space.
+
 ## XGBoost Classifier
 
 XGBoost (`xgboost_classifier`) adds gradient-boosted decision trees through the same registry and

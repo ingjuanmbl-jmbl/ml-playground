@@ -6,15 +6,18 @@ import warnings
 from typing import Any
 
 import numpy as np
+import pandas as pd
 import plotly.express as px
 import streamlit as st
 
 from ml_playground.data.contracts import Dataset
 from ml_playground.data.registry import DatasetRegistry
 from ml_playground.evaluation.classification import evaluate_classification
-from ml_playground.models.classification import DEFAULT_MODEL_REGISTRY
+from ml_playground.evaluation.clustering import evaluate_clustering
+from ml_playground.models.catalog import DEFAULT_MODEL_REGISTRY
 from ml_playground.models.registry import ModelRegistry
-from ml_playground.evaluation.results import ClassificationResult
+from ml_playground.evaluation.results import ClassificationResult, ClusteringResult
+from ml_playground.models.specifications import ProblemType
 from ml_playground.training.contracts import TrainingOutput, TrainingRequest
 from ml_playground.training.runner import GenericTrainingRunner
 from ml_playground.ui.widgets import parameter_widget
@@ -25,6 +28,7 @@ from ml_playground.visualization.classification import (
     loss_curve_figure,
 )
 from ml_playground.visualization.datasets import dataset_scatter
+from ml_playground.visualization.clustering import clustering_scatter_figure
 
 
 def _class_names(dataset: Dataset, labels: tuple[Any, ...]) -> list[str]:
@@ -100,6 +104,7 @@ def _render_training_results(
                 key="mlp_loss_curve",
             )
 
+
     names = _class_names(dataset, result.class_labels)
     st.subheader("Confusion matrix")
     st.plotly_chart(
@@ -168,6 +173,66 @@ def _render_training_results(
             )
 
 
+def _render_clustering_results(
+    dataset: Dataset, output: TrainingOutput, result: ClusteringResult
+) -> None:
+    """Render metrics, provenance, centroids, and a selectable two-feature view."""
+    st.subheader("Clustering evaluation")
+    columns = st.columns(3)
+    for column, name in zip(columns, result.metrics, strict=True):
+        value = result.metrics[name]
+        column.metric(name.replace("_", " ").title(), "Unavailable" if value is None else f"{value:.4f}")
+        if value is None:
+            column.caption(result.metric_availability[name].reason)
+    st.metric("Clusters found", result.n_clusters)
+    st.metric("Training time (seconds)", f"{result.training_seconds:.4f}")
+    st.write("Resolved parameters")
+    st.json(dict(output.configuration.model_parameters))
+
+    if result.centroids is not None:
+        centers = np.asarray(result.centroids)
+        st.subheader("Cluster centroids")
+        st.caption(
+            "Coordinates are shown in the original feature scale "
+            "(inverse-transformed from the fitted scaler)."
+        )
+        st.dataframe(
+            pd.DataFrame(
+                centers,
+                columns=dataset.feature_names,
+                index=[f"Cluster {i}" for i in range(len(centers))],
+            )
+        )
+
+    if dataset.n_features < 2:
+        st.info("At least two features are needed for a 2D cluster scatter plot.")
+        return
+    feature_names = list(dataset.feature_names)
+    if len(feature_names) == 2:
+        x_feature, y_feature = feature_names
+    else:
+        x_column, y_column = st.columns(2)
+        x_feature = x_column.selectbox(
+            "Cluster view (x feature)", feature_names, key="cluster_x_feature"
+        )
+        y_feature = y_column.selectbox(
+            "Cluster view (y feature)",
+            [feature for feature in feature_names if feature != x_feature],
+            key="cluster_y_feature",
+        )
+    st.subheader("Cluster visualization")
+    if output.cluster_labels is None:
+        st.info("This model did not return cluster labels.")
+        return
+    st.plotly_chart(
+        clustering_scatter_figure(
+            dataset.X, output.cluster_labels, x_feature, y_feature, centroids=result.centroids
+        ),
+        width="stretch",
+        key="clustering_scatter",
+    )
+
+
 def render_training_panel(
     dataset: Dataset,
     dataset_id: str,
@@ -176,10 +241,10 @@ def render_training_panel(
     model_registry: ModelRegistry = DEFAULT_MODEL_REGISTRY,
 ) -> None:
     """Render model selection and submit one declarative TrainingRequest."""
-    st.header("Train and evaluate a classifier")
+    st.header("Train and evaluate a model")
     model_specs = model_registry.list()
     if not model_specs:
-        st.info("No classification models are registered yet.")
+        st.info("No models are registered yet.")
         return
     spec_by_id = {spec.id: spec for spec in model_specs}
     model_id = st.selectbox(
@@ -187,6 +252,8 @@ def render_training_panel(
     )
     specification = spec_by_id[model_id]
     st.caption(specification.description)
+    if specification.problem_type is ProblemType.CLUSTERING:
+        st.info("Unsupervised training uses feature columns only; any dataset target labels are ignored.")
 
     with st.form("training_request_form"):
         st.subheader("Model hyperparameters")
@@ -195,7 +262,12 @@ def render_training_panel(
             for parameter in specification.hyperparameters
             if parameter.name != "random_state"
         }
-        test_size = st.slider("Test set size", min_value=0.1, max_value=0.5, value=0.2, step=0.05)
+        if specification.problem_type is ProblemType.CLUSTERING:
+            test_size = 0.2  # Retained only because TrainingRequest is shared with supervised runs.
+        else:
+            test_size = st.slider(
+                "Test set size", min_value=0.1, max_value=0.5, value=0.2, step=0.05
+            )
         random_state = st.number_input(
             "Random state", min_value=0, max_value=2**32 - 1, value=42, step=1
         )
@@ -218,9 +290,12 @@ def render_training_panel(
             output = runner.run(request)
         for warning in captured:
             st.warning(f"{warning.category.__name__}: {warning.message}")
-        result = evaluate_classification(output)
+        if specification.problem_type is ProblemType.CLUSTERING:
+            result = evaluate_clustering(output)
+            _render_clustering_results(dataset, output, result)
+        else:
+            result = evaluate_classification(output)
+            _render_training_results(dataset, output, result)
     except (KeyError, TypeError, ValueError, RuntimeError) as error:
         st.error(f"Could not train the selected model: {error}")
         return
-
-    _render_training_results(dataset, output, result)

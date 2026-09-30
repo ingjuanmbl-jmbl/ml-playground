@@ -52,6 +52,7 @@ class TrainingConfiguration:
     split_random_state: int
     estimator_random_state: object | None
     stratified: bool
+    split_performed: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,6 +75,7 @@ class TrainingOutput:
     cluster_labels: np.ndarray | None = None
     noise_mask: np.ndarray | None = None
     centroids: np.ndarray | None = None
+    X_used: pd.DataFrame | None = None
 
     def __post_init__(self) -> None:
         if self.training_seconds < 0:

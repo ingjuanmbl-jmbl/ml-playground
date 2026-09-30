@@ -71,8 +71,12 @@ class ClusteringResult(ExperimentResult):
     metrics: Mapping[str, float | None] = field(default_factory=dict)
     noise_mask: Any | None = None
     centroids: Any | None = None
+    n_clusters: int = 0
+    metric_availability: Mapping[str, MetricAvailability] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         ExperimentResult.__post_init__(self)
         if self.problem_type is not ProblemType.CLUSTERING:
             raise ValueError("ClusteringResult requires clustering problem_type.")
+        if self.n_clusters < 0:
+            raise ValueError("n_clusters cannot be negative.")

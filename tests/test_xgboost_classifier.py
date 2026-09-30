@@ -12,9 +12,9 @@ from xgboost import XGBClassifier
 from ml_playground.evaluation.classification import evaluate_classification
 from ml_playground.evaluation.results import ClassificationResult
 from ml_playground.models.classification import (
-    DEFAULT_MODEL_REGISTRY,
     xgboost_classifier_specification,
 )
+from ml_playground.models.catalog import DEFAULT_MODEL_REGISTRY
 from ml_playground.models.specifications import ModelCapability, ProblemType
 from ml_playground.preprocessing.pipelines import ESTIMATOR_STEP, PREPROCESSING_STEP, build_pipeline
 from ml_playground.training.contracts import TrainingRequest

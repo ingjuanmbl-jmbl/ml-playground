@@ -11,9 +11,9 @@ from ml_playground.data.catalog import DEFAULT_DATASET_REGISTRY
 from ml_playground.evaluation.classification import evaluate_classification
 from ml_playground.evaluation.results import ClassificationResult
 from ml_playground.models.classification import (
-    DEFAULT_MODEL_REGISTRY,
     decision_tree_specification,
 )
+from ml_playground.models.catalog import DEFAULT_MODEL_REGISTRY
 from ml_playground.models.specifications import ModelCapability, ProblemType
 from ml_playground.preprocessing.pipelines import (
     ESTIMATOR_STEP,
@@ -53,7 +53,7 @@ def test_decision_tree_registered_with_classification_capabilities():
         }
     )
     assert {spec.id for spec in DEFAULT_MODEL_REGISTRY.list()} == {
-        "logistic_regression", "decision_tree", "random_forest", "mlp_classifier", "xgboost_classifier"
+        "logistic_regression", "decision_tree", "random_forest", "mlp_classifier", "xgboost_classifier", "kmeans"
     }
 
 

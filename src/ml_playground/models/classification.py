@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
-
-from ml_playground.models.registry import ModelRegistry
 from ml_playground.models.specifications import (
     HyperparameterSpec,
     ModelCapability,
@@ -77,19 +77,6 @@ def logistic_regression_specification() -> ModelSpecification:
             "Coefficients describe signed linear effects in scaled feature space."
         ),
         parameter_rules=parameter_rules,
-    )
-
-
-def create_default_model_registry() -> ModelRegistry:
-    """Create the application's initial model catalog."""
-    return ModelRegistry(
-        [
-            logistic_regression_specification(),
-            decision_tree_specification(),
-            random_forest_specification(),
-            mlp_classifier_specification(),
-            xgboost_classifier_specification(),
-        ]
     )
 
 
@@ -333,8 +320,6 @@ def xgboost_classifier_specification() -> ModelSpecification:
     )
 
 
-DEFAULT_MODEL_REGISTRY = create_default_model_registry()
-
 __all__ = [
     "DEFAULT_MODEL_REGISTRY",
     "create_default_model_registry",
@@ -344,3 +329,18 @@ __all__ = [
     "random_forest_specification",
     "xgboost_classifier_specification",
 ]
+
+
+def __getattr__(name: str) -> Any:
+    """Keep the former registry import path available after catalog centralization."""
+    if name in {"DEFAULT_MODEL_REGISTRY", "create_default_model_registry"}:
+        from ml_playground.models.catalog import (
+            DEFAULT_MODEL_REGISTRY,
+            create_default_model_registry,
+        )
+
+        return {
+            "DEFAULT_MODEL_REGISTRY": DEFAULT_MODEL_REGISTRY,
+            "create_default_model_registry": create_default_model_registry,
+        }[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
